@@ -7,6 +7,21 @@ const MOCK_DEVICE_ID = "1234567890";
 const MOCK_EVENT_TYPE = "DEFAULT";
 const MOCK_DATA = { test: "test" };
 
+const headers = new Headers();
+headers.append("Authorization", `Bearer ${MOCK_API_KEY}`);
+headers.append("Content-Type", "application/json");
+
+const singleMsgRequest = {
+  method: "POST",
+  headers,
+  body: JSON.stringify([
+    {
+      device_id: MOCK_DEVICE_ID,
+      payload: JSON.stringify(MOCK_DATA),
+    },
+  ]),
+};
+
 const mockFetch = jest
   .spyOn(global, "fetch")
   .mockImplementation(
@@ -62,10 +77,14 @@ describe("W3bstreamClient", () => {
       expect(client).toBeDefined();
     });
     it("should throw if no url", () => {
-      expect(() => new W3bstreamClient("", MOCK_API_KEY)).toThrow();
+      expect(() => new W3bstreamClient("", MOCK_API_KEY)).toThrow(
+        "W3bstreamClient: url is required"
+      );
     });
     it("should throw if no api key", () => {
-      expect(() => new W3bstreamClient(MOCK_URL, "")).toThrow();
+      expect(() => new W3bstreamClient(MOCK_URL, "")).toThrow(
+        "W3bstreamClient: api key is required"
+      );
     });
   });
   describe("Publishing", () => {
@@ -74,14 +93,27 @@ describe("W3bstreamClient", () => {
 
       client.publish(MOCK_DEVICE_ID, MOCK_DATA, MOCK_EVENT_TYPE);
 
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${MOCK_URL}?eventType=${MOCK_EVENT_TYPE}`,
+        singleMsgRequest
+      );
     });
     it("should publish single msg without event type", () => {
       const client = initClient();
 
       client.publish(MOCK_DEVICE_ID, MOCK_DATA);
 
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${MOCK_URL}?eventType=${MOCK_EVENT_TYPE}`,
+        singleMsgRequest
+      );
+    });
+    it("should throw if no device id", () => {
+      const client = initClient();
+
+      expect(() => client.publish("", MOCK_DATA)).rejects.toThrow(
+        "W3bstreamClient: device id is required"
+      );
     });
   });
 });

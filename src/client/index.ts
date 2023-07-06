@@ -25,6 +25,10 @@ export class W3bstreamClient implements IW3bstreamClient {
     data: Object,
     eventType: string = "DEFAULT"
   ): Promise<Response> {
+    if (!deviceId) {
+        throw new Error("W3bstreamClient: device id is required");
+    }
+
     const url = this._buildUrl(eventType);
     const messages = this._parseData(deviceId, data);
     return this._publish(url, messages);
