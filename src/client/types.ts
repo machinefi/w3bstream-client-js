@@ -1,3 +1,3 @@
 export interface IW3bstreamClient {
-  publish: (deviceId: string, eventType: string, data: any) => Promise<any>;
+  publish: (deviceId: string, data: Object, eventType?: string) => Promise<any>;
 }
