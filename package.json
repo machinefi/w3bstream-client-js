@@ -1,8 +1,14 @@
 {
-  "name": "w3bstream-client-js",
+  "name": "@w3bstream/w3bstream-client-js",
   "version": "0.0.1",
   "description": "Official W3bstream Client for JS/TS",
-  "main": "./dist/index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "private": false,
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "test": "jest",
     "build": "tsc"

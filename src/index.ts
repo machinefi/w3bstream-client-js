@@ -1,2 +1,1 @@
-export { W3bstreamClient } from "./client/index.js";
-export { IW3bstreamClient } from "./client/types.js";
+export { W3bstreamClient, IW3bstreamClient } from "./client/index.js";

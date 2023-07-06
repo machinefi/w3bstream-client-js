@@ -1,5 +1,4 @@
-import { W3bstreamClient } from "./";
-import { IW3bstreamClient } from "./types";
+import { W3bstreamClient, IW3bstreamClient } from "./";
 
 const MOCK_URL = "http://localhost:8080";
 const MOCK_API_KEY = "1234567890";

@@ -1,4 +1,6 @@
-import { IW3bstreamClient } from "@src/client/types";
+export interface IW3bstreamClient {
+  publish: (deviceId: string, data: Object, eventType?: string) => Promise<any>;
+}
 
 interface SingleMsg {
   device_id: string;
@@ -26,7 +28,7 @@ export class W3bstreamClient implements IW3bstreamClient {
     eventType: string = "DEFAULT"
   ): Promise<Response> {
     if (!deviceId) {
-        throw new Error("W3bstreamClient: device id is required");
+      throw new Error("W3bstreamClient: device id is required");
     }
 
     const url = this._buildUrl(eventType);
