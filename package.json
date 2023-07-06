@@ -1,0 +1,32 @@
+{
+  "name": "w3bstream-client-js",
+  "version": "0.0.1",
+  "description": "Official W3bstream Client for JS/TS",
+  "main": "./dist/index.js",
+  "scripts": {
+    "test": "jest",
+    "build": "tsc"
+  },
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/machinefi/w3bstream-client-js.git"
+  },
+  "keywords": [
+    "w3bstream"
+  ],
+  "author": "MachineFi Inc.",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/machinefi/w3bstream-client-js/issues"
+  },
+  "homepage": "https://github.com/machinefi/w3bstream-client-js#readme",
+  "devDependencies": {
+    "@types/jest": "^29.5.2",
+    "@types/node": "^20.4.0",
+    "jest": "^29.6.1",
+    "prettier": "2.8.8",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.1.6"
+  }
+}
