@@ -13,12 +13,7 @@ headers.append("Content-Type", "application/json");
 const singleMsgRequest = {
   method: "POST",
   headers,
-  body: JSON.stringify([
-    {
-      device_id: MOCK_DEVICE_ID,
-      payload: JSON.stringify(MOCK_DATA),
-    },
-  ]),
+  body: JSON.stringify(MOCK_DATA),
 };
 
 const mockFetch = jest
@@ -90,27 +85,41 @@ describe("W3bstreamClient", () => {
     it("should publish single msg", () => {
       const client = initClient();
 
-      client.publish(MOCK_DEVICE_ID, MOCK_DATA, MOCK_EVENT_TYPE);
+      const header = {
+        deviceId: MOCK_DEVICE_ID,
+        eventType: MOCK_EVENT_TYPE,
+      };
+
+      client.publish(header, MOCK_DATA);
 
       expect(mockFetch).toHaveBeenCalledWith(
-        `${MOCK_URL}?eventType=${MOCK_EVENT_TYPE}`,
+        `${MOCK_URL}?device_id=${MOCK_DEVICE_ID}&eventType=${MOCK_EVENT_TYPE}`,
         singleMsgRequest
       );
     });
     it("should publish single msg without event type", () => {
       const client = initClient();
 
-      client.publish(MOCK_DEVICE_ID, MOCK_DATA);
+      const header = {
+        deviceId: MOCK_DEVICE_ID,
+      };
+
+      client.publish(header, MOCK_DATA);
 
       expect(mockFetch).toHaveBeenCalledWith(
-        `${MOCK_URL}?eventType=${MOCK_EVENT_TYPE}`,
+        `${MOCK_URL}?device_id=${MOCK_DEVICE_ID}&eventType=${MOCK_EVENT_TYPE}`,
         singleMsgRequest
       );
     });
     it("should throw if no device id", () => {
       const client = initClient();
 
-      expect(() => client.publish("", MOCK_DATA)).rejects.toThrow(
+      const header = {
+        deviceId: "",
+        eventType: MOCK_EVENT_TYPE,
+      };
+
+      expect(() => client.publish(header, MOCK_DATA)).rejects.toThrow(
         "W3bstreamClient: device id is required"
       );
     });

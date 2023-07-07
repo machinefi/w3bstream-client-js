@@ -1,13 +1,12 @@
+export interface Header {
+  deviceId: string;
+  eventType?: string;
+  timestamp?: string;
+}
+
 export interface IW3bstreamClient {
-  publish: (deviceId: string, data: Object, eventType?: string) => Promise<Response>;
+  publish: (header: Header, payload: Object) => Promise<Response>;
 }
-
-interface SingleMsg {
-  device_id: string;
-  payload: string;
-}
-
-interface Messages extends Array<SingleMsg> {}
 
 export class W3bstreamClient implements IW3bstreamClient {
   constructor(private _url: string, private _apiKey: string) {
@@ -22,38 +21,24 @@ export class W3bstreamClient implements IW3bstreamClient {
     this._apiKey = _apiKey;
   }
 
-  public async publish(
-    deviceId: string,
-    data: Object,
-    eventType: string = "DEFAULT"
-  ): Promise<Response> {
-    if (!deviceId) {
+  public async publish(header: Header, payload: Object): Promise<Response> {
+    if (!header.deviceId) {
       throw new Error("W3bstreamClient: device id is required");
     }
 
-    const url = this._buildUrl(eventType);
-    const messages = this._parseData(deviceId, data);
-    return this._publish(url, messages);
+    const url = this._buildUrl(header);
+    return this._publish(url, payload);
   }
 
-  private _buildUrl(eventType: string): string {
-    return `${this._url}?eventType=${eventType}`;
+  private _buildUrl({ deviceId, eventType = "DEFAULT" }: Header): string {
+    return `${this._url}?device_id=${deviceId}&eventType=${eventType}`;
   }
 
-  private _parseData(device_id: string, data: Object): Messages {
-    return [
-      {
-        device_id,
-        payload: JSON.stringify(data),
-      },
-    ];
-  }
-
-  private _publish(url: string, msgs: Messages): Promise<Response> {
+  private _publish(url: string, payload: Object): Promise<Response> {
     return fetch(url, {
       method: "POST",
       headers: this._headers(),
-      body: JSON.stringify(msgs),
+      body: JSON.stringify(payload),
     });
   }
 

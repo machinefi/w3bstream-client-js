@@ -26,9 +26,15 @@ const client = new W3bstreamClient(URL, API_KEY);
 ### Publish messages
 
 ```typescript
-const DEVICE_ID = "device_id";
-const DATA = { test: "test" };
+const header = {
+  deviceId: "device_id",
+  eventType: "event_type",
+};
 
-const res = await client.publish(DEVICE_ID, DATA);
-console.log(await res.json());
+const payload = {
+  data: "data",
+};
+
+const response = await client.publish(header, payload);
+console.log(response);
 ```
