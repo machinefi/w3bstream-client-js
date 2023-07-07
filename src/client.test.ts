@@ -1,3 +1,5 @@
+import axios from "axios";
+
 import { W3bstreamClient, IW3bstreamClient } from "./";
 
 const MOCK_URL = "http://localhost:8080";
@@ -6,51 +8,22 @@ const MOCK_DEVICE_ID = "1234567890";
 const MOCK_EVENT_TYPE = "DEFAULT";
 const MOCK_DATA = { test: "test" };
 
-const headers = new Headers();
-headers.append("Authorization", `Bearer ${MOCK_API_KEY}`);
-headers.append("Content-Type", "application/json");
-
-const mockFetch = jest
-  .spyOn(global, "fetch")
-  .mockImplementation(
-    (
-      input: RequestInfo | URL,
-      _: RequestInit | undefined
-    ): Promise<Response> => {
-      const fetchResponse = {
-        json: () =>
-          Promise.resolve([
-            {
-              index: 0,
-              results: [
-                {
-                  appletName: "1000",
-                  instanceID: "1000",
-                  handler: "start",
-                  returnValue: null,
-                  code: 0,
-                },
-              ],
-            },
-          ]),
-        url: input.toString(),
-        headers: new Headers(),
-        ok: true,
-        redirected: false,
-        status: 200,
-        statusText: "OK",
-        type: new Response().type,
-        clone: () => fetchResponse,
-        body: null,
-        bodyUsed: false,
-        arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
-        blob: () => Promise.resolve(new Blob()),
-        formData: () => Promise.resolve(new FormData()),
-        text: () => Promise.resolve("test"),
-      };
-      return Promise.resolve(fetchResponse);
-    }
-  );
+const mockFetch = jest.spyOn(axios, "post").mockImplementation(() => {
+  return Promise.resolve([
+    {
+      index: 0,
+      results: [
+        {
+          appletName: "1000",
+          instanceID: "1000",
+          handler: "start",
+          returnValue: null,
+          code: 0,
+        },
+      ],
+    },
+  ]);
+});
 
 const initClient = (): IW3bstreamClient =>
   new W3bstreamClient(MOCK_URL, MOCK_API_KEY);
