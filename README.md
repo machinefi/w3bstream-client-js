@@ -26,7 +26,7 @@ npm install axios
 ### Initialize client
 
 ```typescript
-import { W3bstreamClient, WSHeader } from "w3bstream-client-js";
+import { W3bstreamClient } from "w3bstream-client-js";
 
 const URL = "http_route";
 const API_KEY = "api_key";
@@ -37,7 +37,7 @@ const client = new W3bstreamClient(URL, API_KEY);
 ### Publish messages
 
 ```typescript
-const header: WSHeader = {
+const header = {
   deviceId: "device_id",
   eventType: "event_type",
 };
@@ -49,7 +49,8 @@ const payload = {
 
 try {
   const res = await client.publish(header, payload);
-  console.log(res.data);
+  
+  console.log(JSON.stringify(res.data, null, 2));
 } catch (error) {
   console.error(error);
 }
