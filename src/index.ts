@@ -30,8 +30,13 @@ export class W3bstreamClient implements IW3bstreamClient {
     return this._publish(url, payload);
   }
 
-  private _buildUrl({ deviceId, eventType = "DEFAULT" }: Header): string {
-    return `${this._url}?device_id=${deviceId}&eventType=${eventType}`;
+  private _buildUrl({
+    deviceId,
+    eventType = "DEFAULT",
+    timestamp,
+  }: Header): string {
+    const timestampParam = timestamp ? `&timestamp=${timestamp}` : "";
+    return `${this._url}?device_id=${deviceId}&eventType=${eventType}${timestampParam}`;
   }
 
   private _publish(url: string, payload: Object): Promise<Response> {
