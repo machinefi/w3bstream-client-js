@@ -1,11 +1,11 @@
-export interface Header {
+export interface WSHeader {
   deviceId: string;
   eventType?: string;
   timestamp?: string;
 }
 
 export interface IW3bstreamClient {
-  publish: (header: Header, payload: Object) => Promise<Response>;
+  publish: (header: WSHeader, payload: Object) => Promise<Response>;
 }
 
 export class W3bstreamClient implements IW3bstreamClient {
@@ -21,7 +21,7 @@ export class W3bstreamClient implements IW3bstreamClient {
     this._apiKey = _apiKey;
   }
 
-  public async publish(header: Header, payload: Object): Promise<Response> {
+  public async publish(header: WSHeader, payload: Object): Promise<Response> {
     if (!header.deviceId) {
       throw new Error("W3bstreamClient: device id is required");
     }
@@ -34,7 +34,7 @@ export class W3bstreamClient implements IW3bstreamClient {
     deviceId,
     eventType = "DEFAULT",
     timestamp,
-  }: Header): string {
+  }: WSHeader): string {
     const timestampParam = timestamp ? `&timestamp=${timestamp}` : "";
     return `${this._url}?device_id=${deviceId}&eventType=${eventType}${timestampParam}`;
   }
