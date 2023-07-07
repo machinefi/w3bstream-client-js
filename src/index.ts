@@ -1,3 +1,5 @@
+import axios, { AxiosResponse } from "axios";
+
 export interface WSHeader {
   deviceId: string;
   eventType?: string;
@@ -5,7 +7,10 @@ export interface WSHeader {
 }
 
 export interface IW3bstreamClient {
-  publish: (header: WSHeader, payload: Object | Buffer) => Promise<Response>;
+  publish: (
+    header: WSHeader,
+    payload: Object | Buffer
+  ) => Promise<AxiosResponse>;
 }
 
 export class W3bstreamClient implements IW3bstreamClient {
@@ -24,7 +29,7 @@ export class W3bstreamClient implements IW3bstreamClient {
   public async publish(
     header: WSHeader,
     payload: Object | Buffer
-  ): Promise<Response> {
+  ): Promise<AxiosResponse> {
     if (!header.deviceId) {
       throw new Error("W3bstreamClient: device id is required");
     }
@@ -41,20 +46,15 @@ export class W3bstreamClient implements IW3bstreamClient {
     return `${this._url}?device_id=${deviceId}&eventType=${eventType}&timestamp=${timestamp}`;
   }
 
-  private _publish(url: string, payload: Object | Buffer): Promise<Response> {
-    const body = Buffer.isBuffer(payload) ? payload : JSON.stringify(payload);
-
-    return fetch(url, {
-      method: "POST",
-      headers: this._headers(),
-      body,
+  private _publish(
+    url: string,
+    payload: Object | Buffer
+  ): Promise<AxiosResponse> {
+    return axios.post(url, payload, {
+      headers: {
+        Authorization: `Bearer ${this._apiKey}`,
+        "Content-Type": "application/json",
+      },
     });
-  }
-
-  private _headers(): Headers {
-    const headers = new Headers();
-    headers.append("Authorization", `Bearer ${this._apiKey}`);
-    headers.append("Content-Type", "application/json");
-    return headers;
   }
 }
