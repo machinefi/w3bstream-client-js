@@ -1,5 +1,7 @@
 # w3bstream-client-js
 
+[![npm](https://img.shields.io/npm/v/w3bstream-client-js)](https://www.npmjs.com/package/w3bstream-client-js)
+
 The JS/TS Client for W3bstream integration on server. This library allows you to send messages to W3bstream using its API.
 
 ## Prerequisites
