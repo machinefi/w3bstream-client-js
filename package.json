@@ -1,6 +1,6 @@
 {
   "name": "w3bstream-client-js",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Official W3bstream Client for JS/TS",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
