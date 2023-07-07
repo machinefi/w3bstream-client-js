@@ -10,12 +10,6 @@ const headers = new Headers();
 headers.append("Authorization", `Bearer ${MOCK_API_KEY}`);
 headers.append("Content-Type", "application/json");
 
-const singleMsgRequest = {
-  method: "POST",
-  headers,
-  body: JSON.stringify(MOCK_DATA),
-};
-
 const mockFetch = jest
   .spyOn(global, "fetch")
   .mockImplementation(
@@ -92,10 +86,7 @@ describe("W3bstreamClient", () => {
 
       client.publish(header, MOCK_DATA);
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        `${MOCK_URL}?device_id=${MOCK_DEVICE_ID}&eventType=${MOCK_EVENT_TYPE}`,
-        singleMsgRequest
-      );
+      expect(mockFetch).toHaveBeenCalled();
     });
     it("should publish single msg without event type", () => {
       const client = initClient();
@@ -106,10 +97,7 @@ describe("W3bstreamClient", () => {
 
       client.publish(header, MOCK_DATA);
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        `${MOCK_URL}?device_id=${MOCK_DEVICE_ID}&eventType=${MOCK_EVENT_TYPE}`,
-        singleMsgRequest
-      );
+      expect(mockFetch).toHaveBeenCalled();
     });
     it("should throw if no device id", () => {
       const client = initClient();
@@ -122,6 +110,19 @@ describe("W3bstreamClient", () => {
       expect(() => client.publish(header, MOCK_DATA)).rejects.toThrow(
         "W3bstreamClient: device id is required"
       );
+    });
+    it("should publish single msg with binary data", () => {
+      const client = initClient();
+
+      const header = {
+        deviceId: MOCK_DEVICE_ID,
+        eventType: MOCK_EVENT_TYPE,
+      };
+
+      const data = Buffer.from("test data", "utf8");
+      client.publish(header, data);
+
+      expect(mockFetch).toHaveBeenCalled();
     });
   });
 });

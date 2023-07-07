@@ -1,11 +1,11 @@
 export interface WSHeader {
   deviceId: string;
   eventType?: string;
-  timestamp?: string;
+  timestamp?: number;
 }
 
 export interface IW3bstreamClient {
-  publish: (header: WSHeader, payload: Object) => Promise<Response>;
+  publish: (header: WSHeader, payload: Object | Buffer) => Promise<Response>;
 }
 
 export class W3bstreamClient implements IW3bstreamClient {
@@ -21,7 +21,10 @@ export class W3bstreamClient implements IW3bstreamClient {
     this._apiKey = _apiKey;
   }
 
-  public async publish(header: WSHeader, payload: Object): Promise<Response> {
+  public async publish(
+    header: WSHeader,
+    payload: Object | Buffer
+  ): Promise<Response> {
     if (!header.deviceId) {
       throw new Error("W3bstreamClient: device id is required");
     }
@@ -33,17 +36,18 @@ export class W3bstreamClient implements IW3bstreamClient {
   private _buildUrl({
     deviceId,
     eventType = "DEFAULT",
-    timestamp,
+    timestamp = Date.now(),
   }: WSHeader): string {
-    const timestampParam = timestamp ? `&timestamp=${timestamp}` : "";
-    return `${this._url}?device_id=${deviceId}&eventType=${eventType}${timestampParam}`;
+    return `${this._url}?device_id=${deviceId}&eventType=${eventType}&timestamp=${timestamp}`;
   }
 
-  private _publish(url: string, payload: Object): Promise<Response> {
+  private _publish(url: string, payload: Object | Buffer): Promise<Response> {
+    const body = Buffer.isBuffer(payload) ? payload : JSON.stringify(payload);
+
     return fetch(url, {
       method: "POST",
       headers: this._headers(),
-      body: JSON.stringify(payload),
+      body,
     });
   }
 
