@@ -13,10 +13,11 @@ The JS/TS Client for W3bstream integration on server. This library allows you to
   - [Example Code](#example-code)
     - [Initialize client](#initialize-client)
     - [Publish single message](#publish-single-message)
-    - [Publish multiple messages](#publish-multiple-messages)
+    - [Enqueue and publish multiple messages](#enqueue-and-publish-multiple-messages)
     - [API](#api)
       - [client.publish](#clientpublishheader-payload-boolean)
       - [client.publishDirect](#clientpublishdirectmsgs-timestamp-promiseaxiosresponseany)
+      - [client.stop](#clientstop)
 
 ## Prerequisites
 
@@ -41,6 +42,11 @@ const URL = "http_route";
 const API_KEY = "api_key";
 
 const client = new W3bstreamClient(URL, API_KEY);
+
+// or with batching enabled
+const client = new W3bstreamClient(URL, API_KEY, {
+  enableBatching: true,
+});
 ```
 
 ### Publish single message
@@ -52,11 +58,13 @@ const header = {
   timestamp: Date.now(),
 };
 
-// const payload = Buffer.from('{"temperature": 25}', "utf8");
-// OR
+// payload can be an object
 const payload = {
   temperature: 25,
 };
+
+// or binary data
+const payload = Buffer.from('{"temperature": 25}', "utf8");
 
 const main = async () => {
   try {
@@ -74,10 +82,7 @@ main();
 ### Enqueue and publish multiple messages
 
 ```typescript
-const client = new W3bstreamClient(URL, API_KEY, {
-  enableBatching: true,
-});
-
+// The client is initialized with batching enabled
 const EVENT_TYPE = "SUBMIT_TEMPERATURE";
 const EVENTS_TO_PUBLISH = 20;
 
@@ -100,7 +105,7 @@ setTimeout(() => {
 
 ### API
 
-#### client.publish(header, payload): boolean
+#### client.enqueueAndPublish(header, payload): boolean
 
 The event is added to a queue and published in batches. The batch size and publish interval can be configured while initializing the client.
 
@@ -116,3 +121,7 @@ Sends a message to the W3bstream service. Returns a promise that resolves with t
 
 - `header`: An object that includes `device_id`, `event_type` and `timestamp`.
 - `payload`: The message to send. Can be an object or binary data.
+
+#### client.stop()
+
+Stops the client. This method is only relevant when the client is initialized with batching enabled.
