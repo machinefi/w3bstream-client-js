@@ -15,7 +15,7 @@ The JS/TS Client for W3bstream integration on server. This library allows you to
     - [Publish single message](#publish-single-message)
     - [Enqueue and publish multiple messages](#enqueue-and-publish-multiple-messages)
     - [API](#api)
-      - [client.publish](#clientpublishheader-payload-boolean)
+      - [client.enqueueAndPublish](#clientenqueueandpublishheader-payload-boolean)
       - [client.publishDirect](#clientpublishdirectmsgs-timestamp-promiseaxiosresponseany)
       - [client.stop](#clientstop)
 
