@@ -11,9 +11,10 @@ class W3bstreamClientError extends Error {
 
 export class W3bstreamClient implements IW3bstreamClient {
   private _DATA_PUSH_EVENT_TYPE = "DA-TA_PU-SH";
-  private _PUBLISH_INTERVAL_MS = 1_000;
   private _worker: NodeJS.Timeout | null = null;
 
+  private _publishIntervalMs = 1_000;
+  private _batchLimit = 10;
   queue: WSPayload = [];
 
   constructor(
@@ -21,6 +22,8 @@ export class W3bstreamClient implements IW3bstreamClient {
     private _apiKey: string,
     options?: {
       withWorker?: boolean;
+      batchLimit?: number;
+      publishIntervalMs?: number;
     }
   ) {
     if (!_url) {
@@ -32,6 +35,9 @@ export class W3bstreamClient implements IW3bstreamClient {
 
     this._url = _url;
     this._apiKey = _apiKey;
+    this._batchLimit = options?.batchLimit || this._batchLimit;
+    this._publishIntervalMs =
+      options?.publishIntervalMs || this._publishIntervalMs;
 
     if (options?.withWorker) {
       this.startWorker();
@@ -57,11 +63,13 @@ export class W3bstreamClient implements IW3bstreamClient {
   public startWorker(): void {
     this._worker = setInterval(
       () => this._publishQueue(),
-      this._PUBLISH_INTERVAL_MS
+      this._publishIntervalMs
     );
   }
 
   public stopWorker(): void {
+    this._publishQueue();
+
     if (this._worker) {
       clearInterval(this._worker);
       this._worker = null;
@@ -70,7 +78,7 @@ export class W3bstreamClient implements IW3bstreamClient {
 
   private _publishQueue(): void {
     if (this.queue.length > 0) {
-      const payload = this.queue.splice(0, this.queue.length);
+      const payload = this.queue.splice(0, this._batchLimit);
       this._publish(payload);
     }
   }

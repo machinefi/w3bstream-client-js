@@ -13,6 +13,11 @@ import {
   REQUEST_HEADERS,
   MOCK_DEVICE_ID,
   MOCK_EVENT_TYPE,
+  HEADER_2,
+  HEADER_2_REQUEST_BODY,
+  PUBLISH_BATCH_SIZE,
+  DEFAULT_PUBLISH_INTERVAL_MS,
+  TESTING_PUBLISH_INTERVAL_MS,
 } from "../__fixtures__";
 
 describe("W3bstreamClient", () => {
@@ -84,41 +89,6 @@ describe("W3bstreamClient", () => {
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
     });
-    // it("should publish message batch", () => {
-    //   const msgs: WSPayload = [
-    //     {
-    //       device_id: MOCK_DEVICE_ID,
-    //       event_type: MOCK_EVENT_TYPE,
-    //       payload: JSON.stringify(MOCK_DATA),
-    //       timestamp: Date.now(),
-    //     },
-    //     {
-    //       device_id: MOCK_DEVICE_ID,
-    //       event_type: MOCK_EVENT_TYPE,
-    //       payload: JSON.stringify(MOCK_DATA),
-    //       timestamp: Date.now(),
-    //     },
-    //     {
-    //       device_id: MOCK_DEVICE_ID_2,
-    //       event_type: MOCK_EVENT_TYPE,
-    //       payload: JSON.stringify(MOCK_DATA),
-    //       timestamp: Date.now(),
-    //     },
-    //   ];
-    //   const timestamp = Date.now();
-    //   client.publishBatch(msgs, timestamp);
-
-    //   expect(mockFetch).toHaveBeenCalledWith(
-    //     `${MOCK_URL}?eventType=${_DATA_PUSH_EVENT_TYPE}&timestamp=${timestamp}`,
-    //     msgs,
-    //     {
-    //       headers: {
-    //         Authorization: `Bearer ${MOCK_API_KEY}`,
-    //         "Content-Type": "application/json",
-    //       },
-    //     }
-    //   );
-    // });
   });
   describe("publishing queue", () => {
     let client: IW3bstreamClient;
@@ -131,6 +101,7 @@ describe("W3bstreamClient", () => {
 
       client = new W3bstreamClient(MOCK_URL, MOCK_API_KEY, {
         withWorker: true,
+        publishIntervalMs: TESTING_PUBLISH_INTERVAL_MS,
       });
     });
     afterEach(() => {
@@ -143,7 +114,9 @@ describe("W3bstreamClient", () => {
       expect(isQueued).toBe(true);
       expect(client.queue.length).toBe(1);
 
-      await new Promise((resolve) => setTimeout(resolve, 2_000));
+      await new Promise((resolve) =>
+        setTimeout(resolve, TESTING_PUBLISH_INTERVAL_MS)
+      );
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringMatching(
@@ -154,6 +127,132 @@ describe("W3bstreamClient", () => {
       );
 
       expect(client.queue.length).toBe(0);
+    });
+    it("should queue multiple msgs and publish them in interval", async () => {
+      const isQueued1 = client.publish(HEADER_1, MOCK_DATA);
+      const isQueued2 = client.publish(HEADER_2, MOCK_DATA);
+
+      expect(isQueued1).toBe(true);
+      expect(isQueued2).toBe(true);
+      expect(client.queue.length).toBe(2);
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, TESTING_PUBLISH_INTERVAL_MS)
+      );
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringMatching(
+          new RegExp(`${MOCK_URL}\\?eventType=${DATA_PUSH_EVENT_TYPE}`)
+        ),
+        [...HEADER_1_REQUEST_BODY, ...HEADER_2_REQUEST_BODY],
+        REQUEST_HEADERS
+      );
+
+      expect(client.queue.length).toBe(0);
+    });
+    it("should have default publish interval", async () => {
+      const client2 = new W3bstreamClient(MOCK_URL, MOCK_API_KEY, {
+        withWorker: true,
+      });
+
+      const isQueued = client2.publish(HEADER_1, MOCK_DATA);
+
+      expect(isQueued).toBe(true);
+      expect(client2.queue.length).toBe(1);
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, DEFAULT_PUBLISH_INTERVAL_MS)
+      );
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringMatching(
+          new RegExp(`${MOCK_URL}\\?eventType=${DATA_PUSH_EVENT_TYPE}`)
+        ),
+        HEADER_1_REQUEST_BODY,
+        REQUEST_HEADERS
+      );
+
+      expect(client2.queue.length).toBe(0);
+
+      client2.stopWorker();
+    });
+    it("should publish queue on stop", async () => {
+      const isQueued1 = client.publish(HEADER_1, MOCK_DATA);
+      const isQueued2 = client.publish(HEADER_2, MOCK_DATA);
+
+      expect(isQueued1).toBe(true);
+      expect(isQueued2).toBe(true);
+      expect(client.queue.length).toBe(2);
+
+      client.stopWorker();
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringMatching(
+          new RegExp(`${MOCK_URL}\\?eventType=${DATA_PUSH_EVENT_TYPE}`)
+        ),
+        [...HEADER_1_REQUEST_BODY, ...HEADER_2_REQUEST_BODY],
+        REQUEST_HEADERS
+      );
+
+      expect(client.queue.length).toBe(0);
+    });
+    it("cannot publish more messages in one batch than the batch limit", async () => {
+      for (let i = 0; i < 20; i++) {
+        const header: WSHeader = {
+          device_id: "device_id_" + i,
+          event_type: MOCK_EVENT_TYPE,
+          timestamp: Date.now(),
+        };
+        client.publish(header, MOCK_DATA);
+      }
+
+      expect(client.queue.length).toBe(20);
+      await new Promise((resolve) =>
+        setTimeout(resolve, TESTING_PUBLISH_INTERVAL_MS)
+      );
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      expect(client.queue.length).toBe(10);
+      await new Promise((resolve) =>
+        setTimeout(resolve, TESTING_PUBLISH_INTERVAL_MS)
+      );
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+
+      expect(client.queue.length).toBe(0);
+    });
+    it("can set the batch limit", async () => {
+      const client2 = new W3bstreamClient(MOCK_URL, MOCK_API_KEY, {
+        withWorker: true,
+        batchLimit: PUBLISH_BATCH_SIZE,
+        publishIntervalMs: TESTING_PUBLISH_INTERVAL_MS,
+      });
+
+      const eventsToPublish = PUBLISH_BATCH_SIZE * 2;
+
+      for (let i = 0; i < eventsToPublish; i++) {
+        const header: WSHeader = {
+          device_id: "device_id_" + i,
+          event_type: MOCK_EVENT_TYPE,
+          timestamp: Date.now(),
+        };
+        client2.publish(header, MOCK_DATA);
+      }
+
+      expect(client2.queue.length).toBe(eventsToPublish);
+      await new Promise((resolve) =>
+        setTimeout(resolve, TESTING_PUBLISH_INTERVAL_MS)
+      );
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      expect(client2.queue.length).toBe(PUBLISH_BATCH_SIZE);
+      await new Promise((resolve) =>
+        setTimeout(resolve, TESTING_PUBLISH_INTERVAL_MS)
+      );
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+
+      expect(client2.queue.length).toBe(0);
+
+      client2.stopWorker();
     });
   });
 });
