@@ -13,7 +13,7 @@ import {
   REQUEST_HEADERS,
   MOCK_DEVICE_ID,
   MOCK_EVENT_TYPE,
-} from "./fixtures";
+} from "../__fixtures__";
 
 describe("W3bstreamClient", () => {
   describe("constructor", () => {
@@ -84,6 +84,41 @@ describe("W3bstreamClient", () => {
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
     });
+    // it("should publish message batch", () => {
+    //   const msgs: WSPayload = [
+    //     {
+    //       device_id: MOCK_DEVICE_ID,
+    //       event_type: MOCK_EVENT_TYPE,
+    //       payload: JSON.stringify(MOCK_DATA),
+    //       timestamp: Date.now(),
+    //     },
+    //     {
+    //       device_id: MOCK_DEVICE_ID,
+    //       event_type: MOCK_EVENT_TYPE,
+    //       payload: JSON.stringify(MOCK_DATA),
+    //       timestamp: Date.now(),
+    //     },
+    //     {
+    //       device_id: MOCK_DEVICE_ID_2,
+    //       event_type: MOCK_EVENT_TYPE,
+    //       payload: JSON.stringify(MOCK_DATA),
+    //       timestamp: Date.now(),
+    //     },
+    //   ];
+    //   const timestamp = Date.now();
+    //   client.publishBatch(msgs, timestamp);
+
+    //   expect(mockFetch).toHaveBeenCalledWith(
+    //     `${MOCK_URL}?eventType=${_DATA_PUSH_EVENT_TYPE}&timestamp=${timestamp}`,
+    //     msgs,
+    //     {
+    //       headers: {
+    //         Authorization: `Bearer ${MOCK_API_KEY}`,
+    //         "Content-Type": "application/json",
+    //       },
+    //     }
+    //   );
+    // });
   });
   describe("publishing queue", () => {
     let client: IW3bstreamClient;
