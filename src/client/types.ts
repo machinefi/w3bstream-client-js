@@ -16,12 +16,12 @@ export interface WSMessage {
 export interface WSPayload extends Array<WSMessage> {}
 
 export interface IW3bstreamClient {
-  publish: (
+  queue: WSPayload;
+  publish: (header: WSHeader, payload: Object | Buffer) => true;
+  publishDirect: (
     header: WSHeader,
     payload: Object | Buffer
   ) => Promise<AxiosResponse>;
-  publishBatch: (
-    payload: WSPayload,
-    timestamp?: number
-  ) => Promise<AxiosResponse>;
+  startWorker: () => void;
+  stopWorker: () => void;
 }

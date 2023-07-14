@@ -11,8 +11,18 @@ class W3bstreamClientError extends Error {
 
 export class W3bstreamClient implements IW3bstreamClient {
   private _DATA_PUSH_EVENT_TYPE = "DA-TA_PU-SH";
+  private _PUBLISH_INTERVAL_MS = 1_000;
+  private _worker: NodeJS.Timeout | null = null;
 
-  constructor(private _url: string, private _apiKey: string) {
+  queue: WSPayload = [];
+
+  constructor(
+    private _url: string,
+    private _apiKey: string,
+    options?: {
+      withWorker?: boolean;
+    }
+  ) {
     if (!_url) {
       throw new W3bstreamClientError("url is required");
     }
@@ -22,25 +32,53 @@ export class W3bstreamClient implements IW3bstreamClient {
 
     this._url = _url;
     this._apiKey = _apiKey;
+
+    if (options?.withWorker) {
+      this.startWorker();
+    }
   }
 
-  public async publish(
+  public publish(header: WSHeader, payload: Object | Buffer): true {
+    this._validateHeader(header);
+    const payloadObj = this._buildPayload(header, payload);
+    this.queue.push(...payloadObj);
+    return true;
+  }
+
+  public async publishDirect(
     header: WSHeader,
     payload: Object | Buffer
   ): Promise<AxiosResponse> {
-    if (!header.device_id) {
-      throw new W3bstreamClientError("device id is required");
-    }
-
+    this._validateHeader(header);
     const payloadObj = this._buildPayload(header, payload);
     return this._publish(payloadObj, header.timestamp);
   }
 
-  public async publishBatch(
-    payload: WSPayload,
-    timestamp?: number
-  ): Promise<AxiosResponse> {
-    return this._publish(payload, timestamp);
+  public startWorker(): void {
+    this._worker = setInterval(
+      () => this._publishQueue(),
+      this._PUBLISH_INTERVAL_MS
+    );
+  }
+
+  public stopWorker(): void {
+    if (this._worker) {
+      clearInterval(this._worker);
+      this._worker = null;
+    }
+  }
+
+  private _publishQueue(): void {
+    if (this.queue.length > 0) {
+      const payload = this.queue.splice(0, this.queue.length);
+      this._publish(payload);
+    }
+  }
+
+  private _validateHeader(header: WSHeader): void {
+    if (!header.device_id) {
+      throw new W3bstreamClientError("device id is required");
+    }
   }
 
   private _buildPayload(header: WSHeader, payload: Object | Buffer): WSPayload {
