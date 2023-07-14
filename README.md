@@ -16,6 +16,7 @@ The JS/TS Client for W3bstream integration on server. This library allows you to
     - [Publish multiple messages](#publish-multiple-messages)
     - [API](#api)
       - [client.publish(header, payload)](#clientpublishheader-payload)
+      - [client.publishBatch(msgs, timestamp)](#clientpublishbatchmsgs-timestamp)
 
 ## Prerequisites
 
