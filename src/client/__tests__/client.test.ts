@@ -90,7 +90,7 @@ describe("W3bstreamClient", () => {
       expect(mockFetch).toHaveBeenCalledTimes(1);
     });
   });
-  describe("publishing queue", () => {
+  describe("publishing in batches", () => {
     let client: IW3bstreamClient;
     let mockFetch: jest.SpyInstance;
 
@@ -100,16 +100,16 @@ describe("W3bstreamClient", () => {
       });
 
       client = new W3bstreamClient(MOCK_URL, MOCK_API_KEY, {
-        withBatching: true,
+        enableBatching: true,
         publishIntervalMs: TESTING_PUBLISH_INTERVAL_MS,
       });
     });
     afterEach(() => {
-      client.stopWorker();
+      client.stop();
       mockFetch.mockRestore();
     });
     it("should queue single msg and publish it in interval", async () => {
-      const isQueued = client.publish(HEADER_1, MOCK_DATA);
+      const isQueued = client.enqueueAndPublish(HEADER_1, MOCK_DATA);
 
       expect(isQueued).toBe(true);
       expect(client.queue.length).toBe(1);
@@ -129,8 +129,8 @@ describe("W3bstreamClient", () => {
       expect(client.queue.length).toBe(0);
     });
     it("should queue multiple msgs and publish them in interval", async () => {
-      const isQueued1 = client.publish(HEADER_1, MOCK_DATA);
-      const isQueued2 = client.publish(HEADER_2, MOCK_DATA);
+      const isQueued1 = client.enqueueAndPublish(HEADER_1, MOCK_DATA);
+      const isQueued2 = client.enqueueAndPublish(HEADER_2, MOCK_DATA);
 
       expect(isQueued1).toBe(true);
       expect(isQueued2).toBe(true);
@@ -152,10 +152,10 @@ describe("W3bstreamClient", () => {
     });
     it("should have default publish interval", async () => {
       const client2 = new W3bstreamClient(MOCK_URL, MOCK_API_KEY, {
-        withBatching: true,
+        enableBatching: true,
       });
 
-      const isQueued = client2.publish(HEADER_1, MOCK_DATA);
+      const isQueued = client2.enqueueAndPublish(HEADER_1, MOCK_DATA);
 
       expect(isQueued).toBe(true);
       expect(client2.queue.length).toBe(1);
@@ -174,17 +174,17 @@ describe("W3bstreamClient", () => {
 
       expect(client2.queue.length).toBe(0);
 
-      client2.stopWorker();
+      client2.stop();
     });
     it("should publish queue on stop", async () => {
-      const isQueued1 = client.publish(HEADER_1, MOCK_DATA);
-      const isQueued2 = client.publish(HEADER_2, MOCK_DATA);
+      const isQueued1 = client.enqueueAndPublish(HEADER_1, MOCK_DATA);
+      const isQueued2 = client.enqueueAndPublish(HEADER_2, MOCK_DATA);
 
       expect(isQueued1).toBe(true);
       expect(isQueued2).toBe(true);
       expect(client.queue.length).toBe(2);
 
-      client.stopWorker();
+      client.stop();
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringMatching(
@@ -203,7 +203,7 @@ describe("W3bstreamClient", () => {
           event_type: MOCK_EVENT_TYPE,
           timestamp: Date.now(),
         };
-        client.publish(header, MOCK_DATA);
+        client.enqueueAndPublish(header, MOCK_DATA);
       }
 
       expect(client.queue.length).toBe(20);
@@ -222,7 +222,7 @@ describe("W3bstreamClient", () => {
     });
     it("can set the batch limit", async () => {
       const client2 = new W3bstreamClient(MOCK_URL, MOCK_API_KEY, {
-        withBatching: true,
+        enableBatching: true,
         batchSize: PUBLISH_BATCH_SIZE,
         publishIntervalMs: TESTING_PUBLISH_INTERVAL_MS,
       });
@@ -235,7 +235,7 @@ describe("W3bstreamClient", () => {
           event_type: MOCK_EVENT_TYPE,
           timestamp: Date.now(),
         };
-        client2.publish(header, MOCK_DATA);
+        client2.enqueueAndPublish(header, MOCK_DATA);
       }
 
       expect(client2.queue.length).toBe(eventsToPublish);
@@ -252,11 +252,11 @@ describe("W3bstreamClient", () => {
 
       expect(client2.queue.length).toBe(0);
 
-      client2.stopWorker();
+      client2.stop();
     });
     it.skip("should throw error if publish fails", async () => {
-      const isQueued1 = client.publish(HEADER_1, MOCK_DATA);
-      const isQueued2 = client.publish(HEADER_2, MOCK_DATA);
+      const isQueued1 = client.enqueueAndPublish(HEADER_1, MOCK_DATA);
+      const isQueued2 = client.enqueueAndPublish(HEADER_2, MOCK_DATA);
 
       expect(isQueued1).toBe(true);
       expect(isQueued2).toBe(true);
@@ -273,7 +273,7 @@ describe("W3bstreamClient", () => {
     it("should set max queue size", async () => {
       const newQueueSize = 5;
       const client2 = new W3bstreamClient(MOCK_URL, MOCK_API_KEY, {
-        withBatching: true,
+        enableBatching: true,
         batchSize: PUBLISH_BATCH_SIZE,
         publishIntervalMs: TESTING_PUBLISH_INTERVAL_MS,
         maxQueueSize: newQueueSize,
@@ -285,16 +285,29 @@ describe("W3bstreamClient", () => {
           event_type: MOCK_EVENT_TYPE,
           timestamp: Date.now(),
         };
-        client2.publish(header, MOCK_DATA);
+        client2.enqueueAndPublish(header, MOCK_DATA);
       }
 
-      const isAddedToQueue = client2.publish(HEADER_1, MOCK_DATA);
+      const isAddedToQueue = client2.enqueueAndPublish(HEADER_1, MOCK_DATA);
 
       expect(isAddedToQueue).toBe(false);
 
       expect(client2.queue.length).toBe(newQueueSize);
 
-      client2.stopWorker();
+      client2.stop();
+    });
+    it("should throw if worker is not running", () => {
+      const client2 = new W3bstreamClient(MOCK_URL, MOCK_API_KEY, {
+        enableBatching: true,
+        batchSize: PUBLISH_BATCH_SIZE,
+        publishIntervalMs: TESTING_PUBLISH_INTERVAL_MS,
+      });
+
+      client2.stop();
+
+      expect(() => client2.enqueueAndPublish(HEADER_1, MOCK_DATA)).toThrow(
+        "attempted to enqueue without enabling batching"
+      );
     });
   });
 });

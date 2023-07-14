@@ -17,11 +17,10 @@ export interface WSPayload extends Array<WSMessage> {}
 
 export interface IW3bstreamClient {
   queue: WSPayload;
-  publish: (header: WSHeader, payload: Object | Buffer) => boolean;
+  enqueueAndPublish: (header: WSHeader, payload: Object | Buffer) => boolean;
   publishDirect: (
     header: WSHeader,
     payload: Object | Buffer
   ) => Promise<AxiosResponse>;
-  startWorker: () => void;
-  stopWorker: () => void;
+  stop: () => void;
 }

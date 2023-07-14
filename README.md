@@ -71,22 +71,15 @@ const main = async () => {
 main();
 ```
 
-### Batch publish
+### Enqueue and publish multiple messages
 
 ```typescript
-const EVENT_TYPE = "SUBMIT_TEMPERATURE";
-const BATCH_SIZE = 2;
-const PUBLISH_INTERVAL_MS = 5_000;
-const MAX_QUEUE_SIZE = 10;
-
 const client = new W3bstreamClient(URL, API_KEY, {
-  withBatching: true,
-  batchSize: BATCH_SIZE,
-  publishIntervalMs: PUBLISH_INTERVAL_MS,
-  maxQueueSize: MAX_QUEUE_SIZE,
+  enableBatching: true,
 });
 
-const EVENTS_TO_PUBLISH = 10;
+const EVENT_TYPE = "SUBMIT_TEMPERATURE";
+const EVENTS_TO_PUBLISH = 20;
 
 for (let i = 0; i < EVENTS_TO_PUBLISH; i++) {
   const header = {
@@ -97,12 +90,12 @@ for (let i = 0; i < EVENTS_TO_PUBLISH; i++) {
   const payload = {
     temperature: 25 + i,
   };
-  client.publish(header, payload);
+  client.enqueueAndPublish(header, payload);
 }
 
 setTimeout(() => {
-  client.stopWorker();
-}, (EVENTS_TO_PUBLISH / BATCH_SIZE) * PUBLISH_INTERVAL_MS);
+  client.stop();
+}, 5_000);
 ```
 
 ### API

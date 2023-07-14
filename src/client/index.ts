@@ -12,17 +12,17 @@ class W3bstreamClientError extends Error {
 export class W3bstreamClient implements IW3bstreamClient {
   private _DATA_PUSH_EVENT_TYPE = "DA-TA_PU-SH";
   private _worker: NodeJS.Timeout | null = null;
-
   private _publishIntervalMs = 1_000;
   private _batchSize = 10;
   private _maxQueueSize = 0;
+
   queue: WSPayload = [];
 
   constructor(
     private _url: string,
     private _apiKey: string,
     options?: {
-      withBatching?: boolean;
+      enableBatching?: boolean;
       batchSize?: number;
       publishIntervalMs?: number;
       maxQueueSize?: number;
@@ -42,12 +42,20 @@ export class W3bstreamClient implements IW3bstreamClient {
       options?.publishIntervalMs || this._publishIntervalMs;
     this._maxQueueSize = options?.maxQueueSize || this._maxQueueSize;
 
-    if (options?.withBatching) {
-      this.startWorker();
+    if (options?.enableBatching) {
+      this._startWorker();
     }
   }
 
-  public publish(header: WSHeader, payload: Object | Buffer): boolean {
+  public enqueueAndPublish(
+    header: WSHeader,
+    payload: Object | Buffer
+  ): boolean {
+    if (!this._worker) {
+      throw new W3bstreamClientError(
+        "attempted to enqueue without enabling batching"
+      );
+    }
     if (this._maxQueueSize > 0 && this.queue.length >= this._maxQueueSize) {
       return false;
     }
@@ -67,20 +75,20 @@ export class W3bstreamClient implements IW3bstreamClient {
     return this._publish(payloadObj, header.timestamp);
   }
 
-  public startWorker(): void {
-    this._worker = setInterval(
-      () => this._publishQueue(),
-      this._publishIntervalMs
-    );
-  }
-
-  public stopWorker(): void {
+  public stop(): void {
     this._publishQueue();
 
     if (this._worker) {
       clearInterval(this._worker);
       this._worker = null;
     }
+  }
+
+  private _startWorker(): void {
+    this._worker = setInterval(
+      () => this._publishQueue(),
+      this._publishIntervalMs
+    );
   }
 
   private _publishQueue(): void {
