@@ -15,15 +15,17 @@ export class W3bstreamClient implements IW3bstreamClient {
 
   private _publishIntervalMs = 1_000;
   private _batchLimit = 10;
+  private _maxQueueSize = 0;
   queue: WSPayload = [];
 
   constructor(
     private _url: string,
     private _apiKey: string,
     options?: {
-      withWorker?: boolean;
+      withBatching?: boolean;
       batchLimit?: number;
       publishIntervalMs?: number;
+      maxQueueSize?: number;
     }
   ) {
     if (!_url) {
@@ -38,14 +40,19 @@ export class W3bstreamClient implements IW3bstreamClient {
     this._batchLimit = options?.batchLimit || this._batchLimit;
     this._publishIntervalMs =
       options?.publishIntervalMs || this._publishIntervalMs;
+    this._maxQueueSize = options?.maxQueueSize || this._maxQueueSize;
 
-    if (options?.withWorker) {
+    if (options?.withBatching) {
       this.startWorker();
     }
   }
 
-  public publish(header: WSHeader, payload: Object | Buffer): true {
+  public publish(header: WSHeader, payload: Object | Buffer): boolean {
+    if (this._maxQueueSize > 0 && this.queue.length >= this._maxQueueSize) {
+      return false;
+    }
     this._validateHeader(header);
+
     const payloadObj = this._buildPayload(header, payload);
     this.queue.push(...payloadObj);
     return true;
@@ -79,7 +86,13 @@ export class W3bstreamClient implements IW3bstreamClient {
   private _publishQueue(): void {
     if (this.queue.length > 0) {
       const payload = this.queue.splice(0, this._batchLimit);
-      this._publish(payload);
+      try {
+        this._publish(payload);
+      } catch (e) {
+        console.error(e);
+        console.log("requeueing: ", payload);
+        this.queue.push(...payload);
+      }
     }
   }
 

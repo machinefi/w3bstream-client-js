@@ -17,7 +17,7 @@ export interface WSPayload extends Array<WSMessage> {}
 
 export interface IW3bstreamClient {
   queue: WSPayload;
-  publish: (header: WSHeader, payload: Object | Buffer) => true;
+  publish: (header: WSHeader, payload: Object | Buffer) => boolean;
   publishDirect: (
     header: WSHeader,
     payload: Object | Buffer

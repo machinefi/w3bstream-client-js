@@ -100,7 +100,7 @@ describe("W3bstreamClient", () => {
       });
 
       client = new W3bstreamClient(MOCK_URL, MOCK_API_KEY, {
-        withWorker: true,
+        withBatching: true,
         publishIntervalMs: TESTING_PUBLISH_INTERVAL_MS,
       });
     });
@@ -152,7 +152,7 @@ describe("W3bstreamClient", () => {
     });
     it("should have default publish interval", async () => {
       const client2 = new W3bstreamClient(MOCK_URL, MOCK_API_KEY, {
-        withWorker: true,
+        withBatching: true,
       });
 
       const isQueued = client2.publish(HEADER_1, MOCK_DATA);
@@ -222,7 +222,7 @@ describe("W3bstreamClient", () => {
     });
     it("can set the batch limit", async () => {
       const client2 = new W3bstreamClient(MOCK_URL, MOCK_API_KEY, {
-        withWorker: true,
+        withBatching: true,
         batchLimit: PUBLISH_BATCH_SIZE,
         publishIntervalMs: TESTING_PUBLISH_INTERVAL_MS,
       });
@@ -251,6 +251,48 @@ describe("W3bstreamClient", () => {
       expect(mockFetch).toHaveBeenCalledTimes(2);
 
       expect(client2.queue.length).toBe(0);
+
+      client2.stopWorker();
+    });
+    it.skip("should throw error if publish fails", async () => {
+      const isQueued1 = client.publish(HEADER_1, MOCK_DATA);
+      const isQueued2 = client.publish(HEADER_2, MOCK_DATA);
+
+      expect(isQueued1).toBe(true);
+      expect(isQueued2).toBe(true);
+      expect(client.queue.length).toBe(2);
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, TESTING_PUBLISH_INTERVAL_MS)
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      expect(client.queue.length).toBe(2);
+    });
+    it("should set max queue size", async () => {
+      const newQueueSize = 5;
+      const client2 = new W3bstreamClient(MOCK_URL, MOCK_API_KEY, {
+        withBatching: true,
+        batchLimit: PUBLISH_BATCH_SIZE,
+        publishIntervalMs: TESTING_PUBLISH_INTERVAL_MS,
+        maxQueueSize: newQueueSize,
+      });
+
+      for (let i = 0; i < newQueueSize; i++) {
+        const header: WSHeader = {
+          device_id: "device_id_" + i,
+          event_type: MOCK_EVENT_TYPE,
+          timestamp: Date.now(),
+        };
+        client2.publish(header, MOCK_DATA);
+      }
+
+      const isAddedToQueue = client2.publish(HEADER_1, MOCK_DATA);
+
+      expect(isAddedToQueue).toBe(false);
+
+      expect(client2.queue.length).toBe(newQueueSize);
 
       client2.stopWorker();
     });
