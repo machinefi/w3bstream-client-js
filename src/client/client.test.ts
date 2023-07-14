@@ -1,6 +1,7 @@
 import axios from "axios";
 
-import { W3bstreamClient, IW3bstreamClient, WSHeader, WSPayload } from "./";
+import { W3bstreamClient } from ".";
+import { WSHeader, WSPayload, IW3bstreamClient } from "./types";
 
 const MOCK_URL = "http://localhost:8080";
 const MOCK_API_KEY = "1234567890";
@@ -18,12 +19,12 @@ describe("W3bstreamClient", () => {
     });
     it("should throw if no url", () => {
       expect(() => new W3bstreamClient("", MOCK_API_KEY)).toThrow(
-        "W3bstreamClient: url is required"
+        "url is required"
       );
     });
     it("should throw if no api key", () => {
       expect(() => new W3bstreamClient(MOCK_URL, "")).toThrow(
-        "W3bstreamClient: api key is required"
+        "api key is required"
       );
     });
   });
@@ -94,7 +95,7 @@ describe("W3bstreamClient", () => {
       };
 
       await expect(client.publish(header, MOCK_DATA)).rejects.toThrow(
-        "W3bstreamClient: device id is required"
+        "device id is required"
       );
     });
     it("should publish single msg with binary data", () => {
