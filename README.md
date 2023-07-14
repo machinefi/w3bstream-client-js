@@ -15,8 +15,8 @@ The JS/TS Client for W3bstream integration on server. This library allows you to
     - [Publish single message](#publish-single-message)
     - [Publish multiple messages](#publish-multiple-messages)
     - [API](#api)
-      - [client.publish(header, payload)](#clientpublishheader-payload)
-      - [client.publishBatch(msgs, timestamp)](#clientpublishbatchmsgs-timestamp)
+      - [client.publish](#clientpublishheader-payload-boolean)
+      - [client.publishDirect](#clientpublishdirectmsgs-timestamp-promiseaxiosresponseany)
 
 ## Prerequisites
 
@@ -60,7 +60,7 @@ const payload = {
 
 const main = async () => {
   try {
-    const res = await client.publish(header, payload);
+    const res = await client.publishDirect(header, payload);
 
     console.log(JSON.stringify(res.data, null, 2));
   } catch (error) {
@@ -71,70 +71,55 @@ const main = async () => {
 main();
 ```
 
-### Publish multiple messages
+### Batch publish
 
 ```typescript
 const EVENT_TYPE = "SUBMIT_TEMPERATURE";
+const BATCH_SIZE = 2;
+const PUBLISH_INTERVAL_MS = 5_000;
+const MAX_QUEUE_SIZE = 10;
 
-const payloads = [
-  {
-    temperature: 25,
-  },
-  {
-    temperature: 26,
-  },
-  {
-    temperature: 27,
-  },
-];
+const client = new W3bstreamClient(URL, API_KEY, {
+  withBatching: true,
+  batchSize: BATCH_SIZE,
+  publishIntervalMs: PUBLISH_INTERVAL_MS,
+  maxQueueSize: MAX_QUEUE_SIZE,
+});
 
-const msgs = [
-  {
-    device_id: "device_001",
+const EVENTS_TO_PUBLISH = 10;
+
+for (let i = 0; i < EVENTS_TO_PUBLISH; i++) {
+  const header = {
+    device_id: "device_id_" + i,
     event_type: EVENT_TYPE,
-    payload: JSON.stringify(payloads[0]),
     timestamp: Date.now(),
-  },
-  {
-    device_id: "device_001",
-    event_type: EVENT_TYPE,
-    payload: JSON.stringify(payloads[1]),
-    timestamp: Date.now(),
-  },
-  {
-    device_id: "device_002",
-    event_type: EVENT_TYPE,
-    payload: JSON.stringify(payloads[2]),
-    timestamp: Date.now(),
-  },
-];
+  };
+  const payload = {
+    temperature: 25 + i,
+  };
+  client.publish(header, payload);
+}
 
-const timestamp = Date.now();
-
-const main = async () => {
-  try {
-    const res = await client.publishBatch(msgs, timestamp);
-    console.log(JSON.stringify(res.data, null, 2));
-  } catch (error) {
-    console.error(error);
-  }
-};
-
-main();
+setTimeout(() => {
+  client.stopWorker();
+}, (EVENTS_TO_PUBLISH / BATCH_SIZE) * PUBLISH_INTERVAL_MS);
 ```
 
 ### API
 
-#### client.publish(header, payload)
+#### client.publish(header, payload): boolean
+
+The event is added to a queue and published in batches. The batch size and publish interval can be configured while initializing the client.
+
+Returns:
+`true` if the event was successfully added to the queue, `false` otherwise.
+
+- `header`: An object that includes `device_id`, `event_type` and `timestamp`.
+- `payload`: The message to send. Can be an object or binary data.
+
+#### client.publishDirect(msgs, timestamp): Promise\<AxiosResponse\<any>>
 
 Sends a message to the W3bstream service. Returns a promise that resolves with the server's response.
 
 - `header`: An object that includes `device_id`, `event_type` and `timestamp`.
 - `payload`: The message to send. Can be an object or binary data.
-
-#### client.publishBatch(msgs, timestamp)
-
-Sends multiple messages to the W3bstream service. Returns a promise that resolves with the server's response.
-
-- `msgs`: An array of objects that includes `device_id`, `event_type`, `payload` and `timestamp`.
-- `timestamp`: The timestamp of the messages. Should be string.
