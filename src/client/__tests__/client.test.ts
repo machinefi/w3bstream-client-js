@@ -223,7 +223,7 @@ describe("W3bstreamClient", () => {
     it("can set the batch limit", async () => {
       const client2 = new W3bstreamClient(MOCK_URL, MOCK_API_KEY, {
         withBatching: true,
-        batchLimit: PUBLISH_BATCH_SIZE,
+        batchSize: PUBLISH_BATCH_SIZE,
         publishIntervalMs: TESTING_PUBLISH_INTERVAL_MS,
       });
 
@@ -274,7 +274,7 @@ describe("W3bstreamClient", () => {
       const newQueueSize = 5;
       const client2 = new W3bstreamClient(MOCK_URL, MOCK_API_KEY, {
         withBatching: true,
-        batchLimit: PUBLISH_BATCH_SIZE,
+        batchSize: PUBLISH_BATCH_SIZE,
         publishIntervalMs: TESTING_PUBLISH_INTERVAL_MS,
         maxQueueSize: newQueueSize,
       });

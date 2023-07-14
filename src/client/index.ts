@@ -14,7 +14,7 @@ export class W3bstreamClient implements IW3bstreamClient {
   private _worker: NodeJS.Timeout | null = null;
 
   private _publishIntervalMs = 1_000;
-  private _batchLimit = 10;
+  private _batchSize = 10;
   private _maxQueueSize = 0;
   queue: WSPayload = [];
 
@@ -23,7 +23,7 @@ export class W3bstreamClient implements IW3bstreamClient {
     private _apiKey: string,
     options?: {
       withBatching?: boolean;
-      batchLimit?: number;
+      batchSize?: number;
       publishIntervalMs?: number;
       maxQueueSize?: number;
     }
@@ -37,7 +37,7 @@ export class W3bstreamClient implements IW3bstreamClient {
 
     this._url = _url;
     this._apiKey = _apiKey;
-    this._batchLimit = options?.batchLimit || this._batchLimit;
+    this._batchSize = options?.batchSize || this._batchSize;
     this._publishIntervalMs =
       options?.publishIntervalMs || this._publishIntervalMs;
     this._maxQueueSize = options?.maxQueueSize || this._maxQueueSize;
@@ -85,7 +85,7 @@ export class W3bstreamClient implements IW3bstreamClient {
 
   private _publishQueue(): void {
     if (this.queue.length > 0) {
-      const payload = this.queue.splice(0, this._batchLimit);
+      const payload = this.queue.splice(0, this._batchSize);
       try {
         this._publish(payload);
       } catch (e) {
