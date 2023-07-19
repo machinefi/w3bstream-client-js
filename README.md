@@ -83,24 +83,31 @@ main();
 
 ```typescript
 // The client is initialized with batching enabled
-const EVENT_TYPE = "SUBMIT_TEMPERATURE";
-const EVENTS_TO_PUBLISH = 20;
+const events = generateEvents(20);
 
-for (let i = 0; i < EVENTS_TO_PUBLISH; i++) {
-  const header = {
-    device_id: "device_id_" + i,
-    event_type: EVENT_TYPE,
-    timestamp: Date.now(),
-  };
-  const payload = {
-    temperature: 25 + i,
-  };
-  client.enqueueAndPublish(header, payload);
+events.forEach((event) => {
+  client.enqueueAndPublish(event.header, event.payload);
+})
+
+// Mock event generation
+function generateEvents(eventsNum) {
+  const eventType = "SUBMIT_TEMPERATURE";
+  const events = [];
+
+  for (let i = 0; i < eventsNum; i++) {
+    const header = {
+      device_id: "device_id_" + i,
+      event_type: eventType,
+      timestamp: Date.now(),
+    };
+
+    const payload = {
+      temperature: 25 + i,
+    }
+    events.push({ header, payload });
+  }
+  return events;
 }
-
-setTimeout(() => {
-  client.stop();
-}, 5_000);
 ```
 
 ### API
