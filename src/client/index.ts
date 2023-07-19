@@ -62,7 +62,7 @@ export class W3bstreamClient implements IW3bstreamClient {
     this._validateHeader(header);
 
     const payloadObj = this._buildPayload(header, payload);
-    this.queue.push(...payloadObj);
+    this.addToQueue(payloadObj);
     return true;
   }
 
@@ -86,22 +86,31 @@ export class W3bstreamClient implements IW3bstreamClient {
 
   private _startWorker(): void {
     this._worker = setInterval(
-      () => this._publishQueue(),
+      async () => await this._publishQueue(),
       this._publishIntervalMs
     );
   }
 
-  private _publishQueue(): void {
+  private async _publishQueue(): Promise<void> {
     if (this.queue.length > 0) {
-      const payload = this.queue.splice(0, this._batchSize);
+      const payload = this.takeFromQueue(this._batchSize);
+
       try {
-        this._publish(payload);
+        await this._publish(payload);
       } catch (e) {
         console.error(e);
         console.log("requeueing: ", payload);
-        this.queue.push(...payload);
+        this.addToQueue(payload);
       }
     }
+  }
+
+  private takeFromQueue(length: number): WSPayload {
+    return this.queue.splice(0, length);
+  }
+
+  private addToQueue(payloadObj: WSPayload) {
+    this.queue.push(...payloadObj);
   }
 
   private _validateHeader(header: WSHeader): void {
@@ -114,7 +123,7 @@ export class W3bstreamClient implements IW3bstreamClient {
     const {
       device_id,
       event_type = "DEFAULT",
-      timestamp = Date.now(),
+      timestamp = this._currentTimestamp(),
     } = header;
 
     const _payload =
@@ -130,8 +139,12 @@ export class W3bstreamClient implements IW3bstreamClient {
     ];
   }
 
-  private _buildUrl(timestamp: number = Date.now()): string {
+  private _buildUrl(timestamp: number = this._currentTimestamp()): string {
     return `${this._url}?eventType=${this._DATA_PUSH_EVENT_TYPE}&timestamp=${timestamp}`;
+  }
+
+  private _currentTimestamp(): number {
+    return Date.now();
   }
 
   private _publish(
