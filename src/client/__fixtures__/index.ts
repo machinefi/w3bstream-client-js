@@ -6,9 +6,8 @@ export const MOCK_DEVICE_ID = "1234567890";
 export const MOCK_DEVICE_ID_2 = "0987654321";
 export const MOCK_EVENT_TYPE = "DEFAULT";
 export const DATA_PUSH_EVENT_TYPE = "DA-TA_PU-SH";
-export const PUBLISH_BATCH_SIZE = 5
+export const DEFAULT_PUBLISH_BATCH_SIZE = 10;
 export const DEFAULT_PUBLISH_INTERVAL_MS = 1_000;
-export const TESTING_PUBLISH_INTERVAL_MS = 200;
 
 export const MOCK_DATA = { test: "test" };
 
