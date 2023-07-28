@@ -54,8 +54,6 @@ const client = new W3bstreamClient(URL, API_KEY, {
 ```typescript
 const header = {
   device_id: "device_001",
-  event_type: "DEFAULT",
-  timestamp: Date.now(),
 };
 
 // payload can be an object
@@ -87,23 +85,20 @@ const events = generateEvents(20);
 
 events.forEach((event) => {
   client.enqueueAndPublish(event.header, event.payload);
-})
+});
 
 // Mock event generation
 function generateEvents(eventsNum) {
-  const eventType = "SUBMIT_TEMPERATURE";
   const events = [];
 
   for (let i = 0; i < eventsNum; i++) {
     const header = {
       device_id: "device_id_" + i,
-      event_type: eventType,
-      timestamp: Date.now(),
     };
 
     const payload = {
       temperature: 25 + i,
-    }
+    };
     events.push({ header, payload });
   }
   return events;
