@@ -6,18 +6,19 @@ The JS/TS Client for W3bstream integration on server. This library allows you to
 
 ## Table of Contents
 
-- [w3bstream-client-js](#w3bstream-client-js)
-  - [Table of Contents](#table-of-contents)
-  - [Prerequisites](#prerequisites)
-  - [Getting started](#getting-started)
-  - [Example Code](#example-code)
-    - [Initialize client](#initialize-client)
-    - [Publish single message](#publish-single-message)
-    - [Enqueue and publish multiple messages](#enqueue-and-publish-multiple-messages)
-    - [API](#api)
-      - [client.enqueueAndPublish](#clientenqueueandpublishheader-payload-boolean)
-      - [client.publishDirect](#clientpublishdirectmsgs-timestamp-promiseaxiosresponseany)
-      - [client.stop](#clientstop)
+- [Prerequisites](#prerequisites)
+- [Getting started](#getting-started)
+- [Example Code](#example-code)
+  - [Initialize client](#initialize-client)
+  - [Publish single message](#publish-single-message)
+  - [Preprocess your data before publishing](#preprocess-your-data-before-publishing)
+  - [Sending multiple messages](#sending-multiple-messages)
+    - [Waiting for response](#waiting-for-response)
+    - [Using then/catch](#using-thencatch)
+  - [API](#api)
+    - [client.publishDirect](#clientpublishdirectmsgs-timestamp-promiseaxiosresponseany)
+    - [client.enqueueAndPublish](#clientenqueueandpublishheader-payload-boolean)
+    - [client.stop](#clientstop)
 
 ## Prerequisites
 
@@ -42,16 +43,12 @@ const URL = "http_route";
 const API_KEY = "api_key";
 
 const client = new W3bstreamClient(URL, API_KEY);
-
-// or with batching enabled
-const client = new W3bstreamClient(URL, API_KEY, {
-  enableBatching: true,
-});
 ```
 
 ### Publish single message
 
 ```typescript
+// header should include device ID
 const header = {
   device_id: "device_001",
 };
@@ -77,35 +74,69 @@ const main = async () => {
 main();
 ```
 
-### Enqueue and publish multiple messages
+### Preprocess your data before publishing
+
+```ts
+const events = rawData.map(({ id, temp }) => {
+  // each message should include header with device ID
+  const header = {
+    device_id: id,
+  };
+  // and payload with the data itself
+  const payload = {
+    temperature: temp,
+  };
+
+  return { header, payload };
+});
+```
+
+### Sending multiple messages
+
+#### Using `await`
 
 ```typescript
-// The client is initialized with batching enabled
-const events = generateEvents(20);
+const main = async () => {
+  for (let i = 0; i < events.length; i++) {
+    const { header, payload } = events[i];
 
-events.forEach((event) => {
-  client.enqueueAndPublish(event.header, event.payload);
-});
-
-// Mock event generation
-function generateEvents(eventsNum) {
-  const events = [];
-
-  for (let i = 0; i < eventsNum; i++) {
-    const header = {
-      device_id: "device_id_" + i,
-    };
-
-    const payload = {
-      temperature: 25 + i,
-    };
-    events.push({ header, payload });
+    const res = await client.publishDirect(header, payload);
+    console.log(res.data);
   }
-  return events;
-}
+};
+
+main();
+```
+
+#### Using `then/catch`
+
+```typescript
+const main = async () => {
+  for (let i = 0; i < events.length; i++) {
+    const { header, payload } = events[i];
+
+    client
+      .publishDirect(header, payload)
+      .then((res) => {
+        console.log(res.data);
+      })
+      .catch((err) => {
+        console.error(err);
+      });
+  }
+};
+
+main();
 ```
 
 ### API
+
+#### client.publishDirect(msgs, timestamp): Promise\<AxiosResponse\<any>>
+
+Sends a message to the W3bstream service. Returns a promise that resolves with the server's response.
+
+- `header`: An object that includes `device_id`, `event_type` and `timestamp`.
+- `payload`: The message to send. Can be an object or binary data.
 
 #### client.enqueueAndPublish(header, payload): boolean
 
@@ -113,13 +144,6 @@ The event is added to a queue and published in batches. The batch size and publi
 
 Returns:
 `true` if the event was successfully added to the queue, `false` otherwise.
-
-- `header`: An object that includes `device_id`, `event_type` and `timestamp`.
-- `payload`: The message to send. Can be an object or binary data.
-
-#### client.publishDirect(msgs, timestamp): Promise\<AxiosResponse\<any>>
-
-Sends a message to the W3bstream service. Returns a promise that resolves with the server's response.
 
 - `header`: An object that includes `device_id`, `event_type` and `timestamp`.
 - `payload`: The message to send. Can be an object or binary data.
