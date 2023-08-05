@@ -131,11 +131,26 @@ main();
 
 ### API
 
+#### W3bstreamClient(url, apiKey, options)
+
+Initializes the client.
+
+- `url`: The URL of the W3bstream service.
+- `apiKey`: The API key of the W3bstream service.
+- `options`: An object that includes the following optional parameters:
+  - `enableBatching`: Enables batching. Default: `false`.
+  - `batchSize`: The number of events to publish in a single batch. Default: `10`.
+  - `publishIntervalMs`: The interval between batches in milliseconds. Default: `1000`.
+  - `maxQueueSize`: The maximum number of events to queue. Default: `0` (no limit).
+
 #### client.publishDirect(msgs, timestamp): Promise\<AxiosResponse\<any>>
 
 Sends a message to the W3bstream service. Returns a promise that resolves with the server's response.
 
-- `header`: An object that includes `device_id`, `event_type` and `timestamp`.
+- `header`: An object that includes the following parameters:
+  - `device_id`: The ID of the device that sent the message.
+  - `event_type`: The type of the event. _(Optional)_
+  - `timestamp`: The timestamp of the event. _(Optional)_
 - `payload`: The message to send. Can be an object or binary data.
 
 #### client.enqueueAndPublish(header, payload): boolean
@@ -145,9 +160,12 @@ The event is added to a queue and published in batches. The batch size and publi
 Returns:
 `true` if the event was successfully added to the queue, `false` otherwise.
 
-- `header`: An object that includes `device_id`, `event_type` and `timestamp`.
+- `header`: An object that includes the following parameters:
+  - `device_id`: The ID of the device that sent the message.
+  - `event_type`: The type of the event. _(Optional)_
+  - `timestamp`: The timestamp of the event. _(Optional)_
 - `payload`: The message to send. Can be an object or binary data.
 
 #### client.stop()
 
-Stops the client. This method is only relevant when the client is initialized with batching enabled.
+Stops the client. This method is only relevant when the client is initialized with `enableBatching: true`.
