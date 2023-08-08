@@ -2,6 +2,10 @@ import axios, { AxiosResponse } from "axios";
 
 import { WSHeader, WSPayload, IW3bstreamClient } from "./types";
 
+export const DATA_PUSH_EVENT_TYPE = "DA-TA_PU-SH";
+export const DEFAULT_PUBLISH_INTERVAL_MS = 1_000;
+export const DEFAULT_PUBLISH_BATCH_SIZE = 10;
+
 class W3bstreamClientError extends Error {
   constructor(message: string) {
     super(message);
@@ -10,11 +14,12 @@ class W3bstreamClientError extends Error {
 }
 
 export class W3bstreamClient implements IW3bstreamClient {
-  private _DATA_PUSH_EVENT_TYPE = "DA-TA_PU-SH";
+  private _DATA_PUSH_EVENT_TYPE = DATA_PUSH_EVENT_TYPE;
   private _worker: NodeJS.Timeout | null = null;
-  private _publishIntervalMs = 1_000;
-  private _batchSize = 10;
+  private _publishIntervalMs = DEFAULT_PUBLISH_INTERVAL_MS;
+  private _batchSize = DEFAULT_PUBLISH_BATCH_SIZE;
   private _maxQueueSize = 0;
+  private _workerCount = 1;
 
   queue: WSPayload = [];
 
@@ -26,6 +31,7 @@ export class W3bstreamClient implements IW3bstreamClient {
       batchSize?: number;
       publishIntervalMs?: number;
       maxQueueSize?: number;
+      workerCount?: number;
     }
   ) {
     if (!_url) {
@@ -41,13 +47,17 @@ export class W3bstreamClient implements IW3bstreamClient {
     this._publishIntervalMs =
       options?.publishIntervalMs || this._publishIntervalMs;
     this._maxQueueSize = options?.maxQueueSize || this._maxQueueSize;
+    this._workerCount = options?.workerCount || this._workerCount;
 
     if (options?.enableBatching) {
       this._startWorker();
     }
   }
 
-  public enqueueAndPublish(
+  /**
+ * @deprecated since version 2.0. Will be deleted in version 3.0. Use publish instead.
+ */
+  enqueueAndPublish(
     header: WSHeader,
     payload: Object | Buffer
   ): boolean {
@@ -66,7 +76,10 @@ export class W3bstreamClient implements IW3bstreamClient {
     return true;
   }
 
-  public async publishDirect(
+  /**
+* @deprecated since version 2.0. Will be deleted in version 3.0. Use publish instead.
+*/
+  async publishDirect(
     header: WSHeader,
     payload: Object | Buffer
   ): Promise<AxiosResponse> {
@@ -75,7 +88,21 @@ export class W3bstreamClient implements IW3bstreamClient {
     return this._publish(payloadObj, header.timestamp);
   }
 
-  public stop(): void {
+  async publish(msgs: { header: WSHeader, payload: Object | Buffer }[]): Promise<AxiosResponse[]> {
+    msgs.forEach(({ header }) => this._validateHeader(header));
+    const payload = msgs.map(msg => this._buildPayload(msg.header, msg.payload)).flat();
+    const results: AxiosResponse[] = [];
+
+    while (payload.length > 0) {
+      const toPublish = payload.splice(0, this._batchSize);
+      const res = await this._publish(toPublish);
+      results.push(res);
+    }
+
+    return results;
+  }
+
+  stop(): void {
     this._publishQueue();
 
     if (this._worker) {

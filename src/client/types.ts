@@ -13,7 +13,7 @@ export interface WSMessage {
   timestamp: number;
 }
 
-export interface WSPayload extends Array<WSMessage> {}
+export interface WSPayload extends Array<WSMessage> { }
 
 export interface IW3bstreamClient {
   queue: WSPayload;
@@ -22,5 +22,6 @@ export interface IW3bstreamClient {
     header: WSHeader,
     payload: Object | Buffer
   ) => Promise<AxiosResponse>;
+  publish: (events: { header: WSHeader; payload: Object | Buffer }[]) => Promise<AxiosResponse[]>;
   stop: () => void;
 }

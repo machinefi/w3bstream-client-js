@@ -1,25 +1,33 @@
 import axios from "axios";
 
-import { W3bstreamClient } from "..";
-import { WSHeader, IW3bstreamClient } from "../types";
+import { W3bstreamClient, DATA_PUSH_EVENT_TYPE, DEFAULT_PUBLISH_BATCH_SIZE, DEFAULT_PUBLISH_INTERVAL_MS } from "..";
+import { WSHeader, IW3bstreamClient, WSPayload } from "../types";
 import {
   HEADER_1,
   MOCK_API_KEY,
   MOCK_DATA,
   MOCK_URL,
   W3bstreamResponse,
-  DATA_PUSH_EVENT_TYPE,
   HEADER_1_REQUEST_BODY,
   REQUEST_HEADERS,
   MOCK_DEVICE_ID,
   MOCK_EVENT_TYPE,
   HEADER_2,
   HEADER_2_REQUEST_BODY,
-  DEFAULT_PUBLISH_BATCH_SIZE,
-  DEFAULT_PUBLISH_INTERVAL_MS,
 } from "../__fixtures__";
 
 describe("W3bstreamClient", () => {
+  let mockFetch: jest.SpyInstance;
+
+  beforeEach(() => {
+    mockFetch = jest.spyOn(axios, "post").mockImplementation(() => {
+      return Promise.resolve(W3bstreamResponse);
+    });
+  });
+  afterEach(() => {
+    mockFetch.mockRestore();
+  });
+
   describe("constructor", () => {
     it("should initialize", () => {
       const client = new W3bstreamClient(MOCK_URL, MOCK_API_KEY);
@@ -36,19 +44,11 @@ describe("W3bstreamClient", () => {
       );
     });
   });
-  describe("direct publishing", () => {
+  describe("publishDirect", () => {
     let client: IW3bstreamClient;
-    let mockFetch: jest.SpyInstance;
 
     beforeEach(() => {
-      mockFetch = jest.spyOn(axios, "post").mockImplementation(() => {
-        return Promise.resolve(W3bstreamResponse);
-      });
-
       client = new W3bstreamClient(MOCK_URL, MOCK_API_KEY);
-    });
-    afterEach(() => {
-      mockFetch.mockRestore();
     });
 
     it("should publish single msg with complete header", async () => {
@@ -140,15 +140,11 @@ describe("W3bstreamClient", () => {
       );
     });
   });
-  describe("publishing in batches", () => {
+  describe("enqueueAndPublish", () => {
     let client: IW3bstreamClient;
-    let mockFetch: jest.SpyInstance;
 
     beforeEach(() => {
       jest.useFakeTimers();
-      mockFetch = jest.spyOn(axios, "post").mockImplementation(() => {
-        return Promise.resolve(W3bstreamResponse);
-      });
 
       client = new W3bstreamClient(MOCK_URL, MOCK_API_KEY, {
         enableBatching: true,
@@ -156,7 +152,6 @@ describe("W3bstreamClient", () => {
     });
     afterEach(() => {
       client.stop();
-      mockFetch.mockRestore();
       jest.useRealTimers();
     });
 
@@ -171,14 +166,7 @@ describe("W3bstreamClient", () => {
       jest.advanceTimersByTime(DEFAULT_PUBLISH_INTERVAL_MS);
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringMatching(
-          new RegExp(`${MOCK_URL}\\?eventType=${DATA_PUSH_EVENT_TYPE}`)
-        ),
-        HEADER_1_REQUEST_BODY,
-        REQUEST_HEADERS
-      );
-
+      assertAxiosPost(mockFetch, HEADER_1_REQUEST_BODY);
       expect(client.queue.length).toBe(0);
     });
     it("should queue multiple msgs and publish them in interval", async () => {
@@ -194,14 +182,7 @@ describe("W3bstreamClient", () => {
       jest.advanceTimersByTime(DEFAULT_PUBLISH_INTERVAL_MS);
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringMatching(
-          new RegExp(`${MOCK_URL}\\?eventType=${DATA_PUSH_EVENT_TYPE}`)
-        ),
-        [...HEADER_1_REQUEST_BODY, ...HEADER_2_REQUEST_BODY],
-        REQUEST_HEADERS
-      );
-
+      assertAxiosPost(mockFetch, [...HEADER_1_REQUEST_BODY, ...HEADER_2_REQUEST_BODY]);
       expect(client.queue.length).toBe(0);
     });
     it("can set custom publish interval", async () => {
@@ -223,13 +204,7 @@ describe("W3bstreamClient", () => {
       );
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringMatching(
-          new RegExp(`${MOCK_URL}\\?eventType=${DATA_PUSH_EVENT_TYPE}`)
-        ),
-        HEADER_1_REQUEST_BODY,
-        REQUEST_HEADERS
-      );
+      assertAxiosPost(mockFetch, HEADER_1_REQUEST_BODY);
 
       expect(client2.queue.length).toBe(0);
 
@@ -243,19 +218,13 @@ describe("W3bstreamClient", () => {
       client.stop();
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringMatching(
-          new RegExp(`${MOCK_URL}\\?eventType=${DATA_PUSH_EVENT_TYPE}`)
-        ),
-        [...HEADER_1_REQUEST_BODY, ...HEADER_2_REQUEST_BODY],
-        REQUEST_HEADERS
-      );
+      assertAxiosPost(mockFetch, [...HEADER_1_REQUEST_BODY, ...HEADER_2_REQUEST_BODY]);
 
       expect(client.queue.length).toBe(0);
     });
     it("publishes msgs in batches respecting batch size", async () => {
       const eventsToPublish = 20;
-      generateEvents(eventsToPublish, client);
+      generateAndEnqueEvents(eventsToPublish, client);
 
       expect(client.queue.length).toBe(eventsToPublish);
       expect(mockFetch).not.toHaveBeenCalled();
@@ -280,7 +249,7 @@ describe("W3bstreamClient", () => {
       });
 
       const eventsToPublish = newPublishBatchSize * 2;
-      generateEvents(eventsToPublish, client2);
+      generateAndEnqueEvents(eventsToPublish, client2);
 
       expect(client2.queue.length).toBe(eventsToPublish);
       expect(mockFetch).not.toHaveBeenCalled();
@@ -299,7 +268,7 @@ describe("W3bstreamClient", () => {
     it("should throw error if publish fails", (done) => {
       mockFetch.mockRejectedValueOnce(new Error("test error"));
 
-      generateEvents(2, client);
+      generateAndEnqueEvents(2, client);
       expect(client.queue.length).toBe(2);
       expect(mockFetch).not.toHaveBeenCalled();
 
@@ -319,7 +288,7 @@ describe("W3bstreamClient", () => {
         enableBatching: true,
         maxQueueSize: newQueueSize,
       });
-      generateEvents(newQueueSize, client2);
+      generateAndEnqueEvents(newQueueSize, client2);
 
       const isAddedToQueue = client2.enqueueAndPublish(HEADER_1, MOCK_DATA);
 
@@ -336,9 +305,112 @@ describe("W3bstreamClient", () => {
       );
     });
   });
+  describe("publish", () => {
+    let client: IW3bstreamClient;
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+
+      client = new W3bstreamClient(MOCK_URL, MOCK_API_KEY);
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it("should publish single msg", async () => {
+      const events = generateEvents(HEADER_1, 1);
+
+      const res = await client.publish(events);
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      assertAxiosNthPostCall(mockFetch, 1, HEADER_1_REQUEST_BODY, 1);
+      expect(res.length).toBe(1);
+    });
+    it("should publish multiple msgs", async () => {
+      const events = generateEvents(HEADER_1, 2);
+
+      const res = await client.publish(events);
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      assertAxiosNthPostCall(mockFetch, 1, HEADER_1_REQUEST_BODY, 2);
+      expect(res.length).toBe(1);
+    });
+    it("should publish msgs in batches respecting batch size", async () => {
+      const batch1 = generateEvents(HEADER_1);
+      const batch2 = generateEvents(HEADER_2);
+      const eventsAll = [...batch1, ...batch2];
+
+      const res = await client.publish(eventsAll);
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      assertAxiosNthPostCall(mockFetch, 1, HEADER_1_REQUEST_BODY);
+      assertAxiosNthPostCall(mockFetch, 2, HEADER_2_REQUEST_BODY);
+      expect(res.length).toBe(eventsAll.length / DEFAULT_PUBLISH_BATCH_SIZE)
+    });
+    it("should publish msgs in batches if msgs length is uneven", async () => {
+      const batch1 = generateEvents(HEADER_1);
+      const batch2Size = DEFAULT_PUBLISH_BATCH_SIZE - 1;
+      const batch2 = generateEvents(HEADER_2, batch2Size);
+      const events = [...batch1, ...batch2];
+
+      const res = await client.publish(events);
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      assertAxiosNthPostCall(mockFetch, 1, HEADER_1_REQUEST_BODY);
+      assertAxiosNthPostCall(mockFetch, 2, HEADER_2_REQUEST_BODY, batch2Size);
+      expect(res.length).toBe(Math.ceil(events.length / DEFAULT_PUBLISH_BATCH_SIZE));
+    });
+    // it("should publish msgs in batches with one worker", async () => {
+    //   const client2 = new W3bstreamClient(MOCK_URL, MOCK_API_KEY, {
+    //     workerCount: 1,
+    //   });
+    // })
+    it("should throw if no device id", async () => {
+      const msgs = [
+        {
+          header: { ...HEADER_1, device_id: "" },
+          payload: MOCK_DATA,
+        }
+      ]
+
+      await expect(client.publish(msgs)).rejects.toThrow(
+        "device id is required"
+      );
+    });
+  })
+
 });
 
-function generateEvents(eventsToPublish: number, client: IW3bstreamClient) {
+function assertAxiosPost(mockFetch: jest.SpyInstance<any, any, any>, body: WSPayload) {
+  expect(mockFetch).toHaveBeenCalledWith(
+    expect.stringMatching(
+      new RegExp(`${MOCK_URL}\\?eventType=${DATA_PUSH_EVENT_TYPE}`)
+    ),
+    body,
+    REQUEST_HEADERS
+  );
+}
+
+function assertAxiosNthPostCall(mockFetch: jest.SpyInstance<any, any, any>, nthCall: number, body: WSPayload, size: number = DEFAULT_PUBLISH_BATCH_SIZE) {
+  expect(mockFetch).toHaveBeenNthCalledWith(
+    nthCall,
+    expect.stringMatching(
+      new RegExp(`${MOCK_URL}\\?eventType=${DATA_PUSH_EVENT_TYPE}`)
+    ),
+    Array(size).fill(body).flat(),
+    REQUEST_HEADERS
+  );
+}
+
+function generateEvents(header: WSHeader, size: number = DEFAULT_PUBLISH_BATCH_SIZE) {
+  return Array(size).fill({
+    header,
+    payload: MOCK_DATA,
+  });
+}
+
+function generateAndEnqueEvents(eventsToPublish: number, client: IW3bstreamClient) {
   for (let i = 0; i < eventsToPublish; i++) {
     const header: WSHeader = {
       device_id: "device_id_" + i,
