@@ -223,7 +223,7 @@ describe("W3bstreamClient", () => {
       expect(client.queue.length).toBe(0);
     });
     it("publishes msgs in batches respecting batch size", async () => {
-      const eventsToPublish = 20;
+      const eventsToPublish = DEFAULT_PUBLISH_BATCH_SIZE * 2;
       generateAndEnqueEvents(eventsToPublish, client);
 
       expect(client.queue.length).toBe(eventsToPublish);
@@ -320,52 +320,62 @@ describe("W3bstreamClient", () => {
 
     it("should publish single msg", async () => {
       const events = generateEvents(HEADER_1, 1);
+      const calls = calcExpectedCallTimes(events);
 
       const res = await client.publish(events);
 
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockFetch).toHaveBeenCalledTimes(calls);
       assertAxiosNthPostCall(mockFetch, 1, HEADER_1_REQUEST_BODY, 1);
-      expect(res.length).toBe(1);
+      expect(res.length).toBe(calls);
     });
     it("should publish multiple msgs", async () => {
       const events = generateEvents(HEADER_1, 2);
+      const calls = calcExpectedCallTimes(events);
 
       const res = await client.publish(events);
 
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockFetch).toHaveBeenCalledTimes(calls);
       assertAxiosNthPostCall(mockFetch, 1, HEADER_1_REQUEST_BODY, 2);
-      expect(res.length).toBe(1);
+      expect(res.length).toBe(calls);
     });
     it("should publish msgs in batches respecting batch size", async () => {
       const batch1 = generateEvents(HEADER_1);
       const batch2 = generateEvents(HEADER_2);
       const eventsAll = [...batch1, ...batch2];
+      const calls = calcExpectedCallTimes(eventsAll);
 
       const res = await client.publish(eventsAll);
 
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch).toHaveBeenCalledTimes(calls);
       assertAxiosNthPostCall(mockFetch, 1, HEADER_1_REQUEST_BODY);
       assertAxiosNthPostCall(mockFetch, 2, HEADER_2_REQUEST_BODY);
-      expect(res.length).toBe(eventsAll.length / DEFAULT_PUBLISH_BATCH_SIZE)
+      expect(res.length).toBe(calls)
     });
     it("should publish msgs in batches if msgs length is uneven", async () => {
       const batch1 = generateEvents(HEADER_1);
       const batch2Size = DEFAULT_PUBLISH_BATCH_SIZE - 1;
       const batch2 = generateEvents(HEADER_2, batch2Size);
       const events = [...batch1, ...batch2];
+      const calls = calcExpectedCallTimes(events);
 
       const res = await client.publish(events);
 
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch).toHaveBeenCalledTimes(calls);
       assertAxiosNthPostCall(mockFetch, 1, HEADER_1_REQUEST_BODY);
       assertAxiosNthPostCall(mockFetch, 2, HEADER_2_REQUEST_BODY, batch2Size);
-      expect(res.length).toBe(Math.ceil(events.length / DEFAULT_PUBLISH_BATCH_SIZE));
+      expect(res.length).toBe(calls);
     });
-    // it("should publish msgs in batches with one worker", async () => {
-    //   const client2 = new W3bstreamClient(MOCK_URL, MOCK_API_KEY, {
-    //     workerCount: 1,
-    //   });
-    // })
+    it("should publish 100_000 msgs in batches", async () => {
+      const client2 = new W3bstreamClient(MOCK_URL, MOCK_API_KEY);
+
+      const eventsAll = generateEvents(HEADER_1, 100_000);
+      const calls = calcExpectedCallTimes(eventsAll);
+
+      const res = await client2.publish(eventsAll);
+
+      expect(mockFetch).toHaveBeenCalledTimes(calls);
+      expect(res.length).toBe(calls);
+    });
     it("should throw if no device id", async () => {
       const msgs = [
         {
@@ -381,6 +391,10 @@ describe("W3bstreamClient", () => {
   })
 
 });
+
+function calcExpectedCallTimes(events: any[]) {
+  return Math.ceil(events.length / DEFAULT_PUBLISH_BATCH_SIZE);
+}
 
 function assertAxiosPost(mockFetch: jest.SpyInstance<any, any, any>, body: WSPayload) {
   expect(mockFetch).toHaveBeenCalledWith(

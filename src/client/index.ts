@@ -4,7 +4,7 @@ import { WSHeader, WSPayload, IW3bstreamClient } from "./types";
 
 export const DATA_PUSH_EVENT_TYPE = "DA-TA_PU-SH";
 export const DEFAULT_PUBLISH_INTERVAL_MS = 1_000;
-export const DEFAULT_PUBLISH_BATCH_SIZE = 10;
+export const DEFAULT_PUBLISH_BATCH_SIZE = 100;
 
 class W3bstreamClientError extends Error {
   constructor(message: string) {
@@ -18,8 +18,8 @@ export class W3bstreamClient implements IW3bstreamClient {
   private _worker: NodeJS.Timeout | null = null;
   private _publishIntervalMs = DEFAULT_PUBLISH_INTERVAL_MS;
   private _batchSize = DEFAULT_PUBLISH_BATCH_SIZE;
+  private _batchMax = 1000;
   private _maxQueueSize = 0;
-  private _workerCount = 1;
 
   queue: WSPayload = [];
 
@@ -31,7 +31,6 @@ export class W3bstreamClient implements IW3bstreamClient {
       batchSize?: number;
       publishIntervalMs?: number;
       maxQueueSize?: number;
-      workerCount?: number;
     }
   ) {
     if (!_url) {
@@ -47,7 +46,6 @@ export class W3bstreamClient implements IW3bstreamClient {
     this._publishIntervalMs =
       options?.publishIntervalMs || this._publishIntervalMs;
     this._maxQueueSize = options?.maxQueueSize || this._maxQueueSize;
-    this._workerCount = options?.workerCount || this._workerCount;
 
     if (options?.enableBatching) {
       this._startWorker();
@@ -94,9 +92,14 @@ export class W3bstreamClient implements IW3bstreamClient {
     const results: AxiosResponse[] = [];
 
     while (payload.length > 0) {
-      const toPublish = payload.splice(0, this._batchSize);
-      const res = await this._publish(toPublish);
-      results.push(res);
+      const batchGroup = payload.splice(0, this._batchMax);
+      const jobsNum = Math.ceil(batchGroup.length / this._batchSize);
+
+      await Promise.all([...Array(jobsNum)].map(async () => {
+        const toPublish = batchGroup.splice(0, this._batchSize);
+        const res = await this._publish(toPublish);
+        results.push(res);
+      }));
     }
 
     return results;
