@@ -1,10 +1,13 @@
+import { Observable, from, of, timer, zip } from 'rxjs';
+import { bufferCount, concatMap, map, mergeMap, take } from 'rxjs/operators';
 import axios, { AxiosResponse } from "axios";
 
-import { WSHeader, WSPayload, IW3bstreamClient } from "./types";
+import { WSHeader, WSPayload, IW3bstreamClient, WSMessage, RawEvent } from "./types";
 
 export const DATA_PUSH_EVENT_TYPE = "DA-TA_PU-SH";
 export const DEFAULT_PUBLISH_INTERVAL_MS = 1_000;
 export const DEFAULT_PUBLISH_BATCH_SIZE = 100;
+export const DEFAULT_PUBLISH_BATCH_MAX = 1_000;
 
 class W3bstreamClientError extends Error {
   constructor(message: string) {
@@ -15,23 +18,22 @@ class W3bstreamClientError extends Error {
 
 export class W3bstreamClient implements IW3bstreamClient {
   private _DATA_PUSH_EVENT_TYPE = DATA_PUSH_EVENT_TYPE;
-  private _worker: NodeJS.Timeout | null = null;
-  private _publishIntervalMs = DEFAULT_PUBLISH_INTERVAL_MS;
-  private _batchSize = DEFAULT_PUBLISH_BATCH_SIZE;
-  private _batchMax = 1000;
-  private _maxQueueSize = 0;
+  private _batchMax = DEFAULT_PUBLISH_BATCH_MAX;
 
-  queue: WSPayload = [];
+  private _publishIntervalMs;
+  private _batchSize;
+  // private _numberOfRetries = 1;
 
   constructor(
     private _url: string,
     private _apiKey: string,
-    options?: {
-      enableBatching?: boolean;
+    {
+      batchSize = DEFAULT_PUBLISH_BATCH_SIZE,
+      publishIntervalMs = DEFAULT_PUBLISH_INTERVAL_MS
+    }: {
       batchSize?: number;
       publishIntervalMs?: number;
-      maxQueueSize?: number;
-    }
+    } = {}
   ) {
     if (!_url) {
       throw new W3bstreamClientError("url is required");
@@ -42,114 +44,70 @@ export class W3bstreamClient implements IW3bstreamClient {
 
     this._url = _url;
     this._apiKey = _apiKey;
-    this._batchSize = options?.batchSize || this._batchSize;
-    this._publishIntervalMs =
-      options?.publishIntervalMs || this._publishIntervalMs;
-    this._maxQueueSize = options?.maxQueueSize || this._maxQueueSize;
-
-    if (options?.enableBatching) {
-      this._startWorker();
-    }
+    this._batchSize = batchSize;
+    this._publishIntervalMs = publishIntervalMs;
   }
 
-  /**
- * @deprecated since version 2.0. Will be deleted in version 3.0. Use publish instead.
- */
-  enqueueAndPublish(
-    header: WSHeader,
-    payload: Object | Buffer
-  ): boolean {
-    if (!this._worker) {
-      throw new W3bstreamClientError(
-        "attempted to enqueue without enabling batching"
-      );
-    }
-    if (this._maxQueueSize > 0 && this.queue.length >= this._maxQueueSize) {
-      return false;
-    }
-    this._validateHeader(header);
-
-    const payloadObj = this._buildPayload(header, payload);
-    this.addToQueue(payloadObj);
-    return true;
-  }
-
-  /**
-* @deprecated since version 2.0. Will be deleted in version 3.0. Use publish instead.
-*/
-  async publishDirect(
+  async publishSingle(
     header: WSHeader,
     payload: Object | Buffer
   ): Promise<AxiosResponse> {
     this._validateHeader(header);
-    const payloadObj = this._buildPayload(header, payload);
-    return this._publish(payloadObj, header.timestamp);
+    const payloadObj = this._buildPayload({ header, payload });
+    return this._publish([payloadObj], header.timestamp);
   }
 
-  async publish(msgs: { header: WSHeader, payload: Object | Buffer }[]): Promise<AxiosResponse[]> {
-    msgs.forEach(({ header }) => this._validateHeader(header));
-    const payload = msgs.map(msg => this._buildPayload(msg.header, msg.payload)).flat();
-    const results: AxiosResponse[] = [];
-
-    while (payload.length > 0) {
-      const batchGroup = payload.splice(0, this._batchMax);
-      const jobsNum = Math.ceil(batchGroup.length / this._batchSize);
-
-      await Promise.all([...Array(jobsNum)].map(async () => {
-        const toPublish = batchGroup.splice(0, this._batchSize);
-        const res = await this._publish(toPublish);
-        results.push(res);
-      }));
-    }
-
-    return results;
+  publishEvents(events: RawEvent[]): Observable<Promise<AxiosResponse>> {
+    const chunked = this._processAndChunkRawEvents(events)
+    const publishInterval = this._getPublishInterval(events.length)
+    const chunksWithInterval = this._addIntervalToChunks(chunked, publishInterval)
+    return this._chunkPublisher(chunksWithInterval)
   }
 
-  stop(): void {
-    this._publishQueue();
-
-    if (this._worker) {
-      clearInterval(this._worker);
-      this._worker = null;
-    }
+  private _chunkPublisher(chunksWithInterval: Observable<WSMessage[]>): Observable<Promise<AxiosResponse>> {
+    return from(chunksWithInterval).pipe(
+      mergeMap((chunk) =>
+        of(this._publish(chunk))
+      )
+    );
   }
-
-  private _startWorker(): void {
-    this._worker = setInterval(
-      async () => await this._publishQueue(),
-      this._publishIntervalMs
+  // .pipe(
+  //   retry(this._numberOfRetries)
+  // )
+  // retry({
+  //   count: this._numberOfRetries,
+  //   delay: this._publishIntervalMs,
+  // })
+  private _addIntervalToChunks(chunked: Observable<WSMessage[]>, publishInterval: Observable<number>) {
+    return zip(chunked, publishInterval).pipe(
+      concatMap(([chunk]) => chunk),
+      bufferCount(this._batchSize)
     );
   }
 
-  private async _publishQueue(): Promise<void> {
-    if (this.queue.length > 0) {
-      const payload = this.takeFromQueue(this._batchSize);
-
-      try {
-        await this._publish(payload);
-      } catch (e) {
-        console.error(e);
-        console.log("requeueing: ", payload);
-        this.addToQueue(payload);
-      }
-    }
+  private _getPublishInterval(eventsLength: number) {
+    const delay = 0;
+    return timer(delay, this._publishIntervalMs).pipe(
+      take(this._calcChunksCount(eventsLength))
+    );
   }
 
-  private takeFromQueue(length: number): WSPayload {
-    return this.queue.splice(0, length);
+  private _processAndChunkRawEvents(events: RawEvent[]) {
+    return from(events).pipe(
+      map((event) => this._buildPayload(event)),
+      bufferCount(this._batchMax)
+    );
   }
 
-  private addToQueue(payloadObj: WSPayload) {
-    this.queue.push(...payloadObj);
+  private _calcChunksCount(eventsLength: number): number {
+    return Math.ceil(eventsLength / this._batchMax);
   }
 
-  private _validateHeader(header: WSHeader): void {
-    if (!header.device_id) {
-      throw new W3bstreamClientError("device id is required");
-    }
-  }
+  private _buildPayload(event: RawEvent): WSMessage {
+    const { header, payload } = event;
 
-  private _buildPayload(header: WSHeader, payload: Object | Buffer): WSPayload {
+    this._validateHeader(header);
+
     const {
       device_id,
       event_type = "DEFAULT",
@@ -159,14 +117,18 @@ export class W3bstreamClient implements IW3bstreamClient {
     const _payload =
       payload instanceof Buffer ? payload.toString() : JSON.stringify(payload);
 
-    return [
-      {
-        device_id,
-        event_type,
-        payload: _payload,
-        timestamp,
-      },
-    ];
+    return {
+      device_id,
+      event_type,
+      payload: _payload,
+      timestamp,
+    }
+  }
+
+  private _validateHeader(header: WSHeader): void {
+    if (!header.device_id) {
+      throw new W3bstreamClientError("device id is required");
+    }
   }
 
   private _buildUrl(timestamp: number = this._currentTimestamp()): string {
