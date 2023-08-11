@@ -138,8 +138,6 @@ export class W3bstreamClient implements IW3bstreamClient {
   ): Promise<AxiosResponse> {
     const url = this._buildUrl(timestamp);
 
-    console.timeLog("post", payload.length)
-
     return axios.post(url, payload, {
       headers: {
         Authorization: `Bearer ${this._apiKey}`,
