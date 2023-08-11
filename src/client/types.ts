@@ -1,4 +1,5 @@
 import { AxiosResponse } from "axios";
+import { Observable } from "rxjs";
 
 export interface WSHeader {
   device_id: string;
@@ -13,14 +14,19 @@ export interface WSMessage {
   timestamp: number;
 }
 
-export interface WSPayload extends Array<WSMessage> {}
+export interface WSPayload extends Array<WSMessage> { }
 
 export interface IW3bstreamClient {
-  queue: WSPayload;
-  enqueueAndPublish: (header: WSHeader, payload: Object | Buffer) => boolean;
-  publishDirect: (
+  publishSingle: (
     header: WSHeader,
     payload: Object | Buffer
   ) => Promise<AxiosResponse>;
-  stop: () => void;
+  publishEvents: (
+    events: RawEvent[]
+  ) => Observable<AxiosResponse>;
+}
+
+export interface RawEvent {
+  header: WSHeader;
+  payload: Object | Buffer;
 }
