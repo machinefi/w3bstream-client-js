@@ -22,7 +22,7 @@ export interface IW3bstreamClient {
     payload: Object | Buffer
   ) => Promise<AxiosResponse>;
   publishEvents: (
-    events: { header: WSHeader; payload: Object | Buffer }[]
+    events: RawEvent[]
   ) => Observable<Promise<AxiosResponse>>;
 }
 
