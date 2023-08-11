@@ -23,7 +23,7 @@ export interface IW3bstreamClient {
   ) => Promise<AxiosResponse>;
   publishEvents: (
     events: RawEvent[]
-  ) => Observable<Promise<AxiosResponse>>;
+  ) => Observable<AxiosResponse>;
 }
 
 export interface RawEvent {

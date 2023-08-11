@@ -97,9 +97,8 @@ const events = rawData.map(({ id, temp }) => {
 
 ```ts
 // events from previous example
-client.publishEvents(events).subscribe(async (res) => {
-  const response = await res;
-  console.log(response.data.length);
+client.publishEvents(events).subscribe((res) => {
+  console.log(res.data.length);
 });
 ```
 
@@ -108,9 +107,8 @@ client.publishEvents(events).subscribe(async (res) => {
 ```typescript
 client.publishEvents(events).subscribe({
   // will be called for each batch of messages
-  next: async (res) => {
-    const response = await res;
-    console.log(response.data.length);
+  next: (res) => {
+    console.log(res.data.length);
   },
   error: (err) => {
     console.log(err.message);

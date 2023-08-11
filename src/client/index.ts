@@ -1,4 +1,4 @@
-import { Observable, from, of, timer, zip } from 'rxjs';
+import { Observable, from, timer, zip } from 'rxjs';
 import { bufferCount, concatMap, map, mergeMap, take } from 'rxjs/operators';
 import axios, { AxiosResponse } from "axios";
 
@@ -56,17 +56,16 @@ export class W3bstreamClient implements IW3bstreamClient {
     return this._publish([payloadObj], header.timestamp);
   }
 
-  publishEvents(events: RawEvent[]): Observable<Promise<AxiosResponse>> {
+  publishEvents(events: RawEvent[]): Observable<AxiosResponse> {
     const chunked = this._processAndChunkRawEvents(events)
     const publishInterval = this._getPublishInterval(events.length)
     const chunksWithInterval = this._addIntervalToChunks(chunked, publishInterval)
     return this._chunkPublisher(chunksWithInterval)
   }
 
-  private _chunkPublisher(chunksWithInterval: Observable<WSMessage[]>): Observable<Promise<AxiosResponse>> {
+  private _chunkPublisher(chunksWithInterval: Observable<WSMessage[]>): Observable<AxiosResponse> {
     return from(chunksWithInterval).pipe(
-      mergeMap((chunk) =>
-        of(this._publish(chunk))
+      mergeMap((chunk) => this._publish(chunk)
       ),
     );
   }
