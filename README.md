@@ -63,7 +63,7 @@ const payload = Buffer.from('{"temperature": 25}', "utf8");
 
 const main = async () => {
   try {
-    const res = await client.publishDirect(header, payload);
+    const res = await client.publishSingle(header, payload);
 
     console.log(JSON.stringify(res.data, null, 2));
   } catch (error) {
