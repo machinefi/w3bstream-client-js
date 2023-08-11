@@ -93,40 +93,32 @@ const events = rawData.map(({ id, temp }) => {
 
 ### Sending multiple messages
 
-#### Using `await`
+#### Basic usage
 
-```typescript
-const main = async () => {
-  for (let i = 0; i < events.length; i++) {
-    const { header, payload } = events[i];
-
-    const res = await client.publishDirect(header, payload);
-    console.log(res.data);
-  }
-};
-
-main();
+```ts
+// events from previous example
+client.publishEvents(events).subscribe(async (res) => {
+  const response = await res;
+  console.log(response.data.length);
+});
 ```
 
-#### Using `then/catch`
+#### With more control
 
 ```typescript
-const main = async () => {
-  for (let i = 0; i < events.length; i++) {
-    const { header, payload } = events[i];
-
-    client
-      .publishDirect(header, payload)
-      .then((res) => {
-        console.log(res.data);
-      })
-      .catch((err) => {
-        console.error(err);
-      });
-  }
-};
-
-main();
+client.publishEvents(events).subscribe({
+  // will be called for each batch of messages
+  next: async (res) => {
+    const response = await res;
+    console.log(response.data.length);
+  },
+  error: (err) => {
+    console.log(err.message);
+  },
+  complete: () => {
+    console.log("publishing completed");
+  },
+});
 ```
 
 ### API
@@ -138,12 +130,10 @@ Initializes the client.
 - `url`: The URL of the W3bstream service.
 - `apiKey`: The API key of the W3bstream service.
 - `options`: An object that includes the following optional parameters:
-  - `enableBatching`: Enables batching. Default: `false`.
-  - `batchSize`: The number of events to publish in a single batch. Default: `10`.
-  - `publishIntervalMs`: The interval between batches in milliseconds. Default: `1000`.
-  - `maxQueueSize`: The maximum number of events to queue. Default: `0` (no limit).
+  - `batchSize`: The number of events to publish in a single batch. Default: `100`.
+  - `publishIntervalMs`: The interval between batche groups in milliseconds. Each batch group consist of 10 batches. Default: `1000`.
 
-#### client.publishDirect(msgs, timestamp): Promise\<AxiosResponse\<any>>
+#### client.publishSingle(header, payload): Promise\<AxiosResponse\<any>>
 
 Sends a message to the W3bstream service. Returns a promise that resolves with the server's response.
 
@@ -153,19 +143,13 @@ Sends a message to the W3bstream service. Returns a promise that resolves with t
   - `timestamp`: The timestamp of the event. _(Optional)_
 - `payload`: The message to send. Can be an object or binary data.
 
-#### client.enqueueAndPublish(header, payload): boolean
+#### client.publishEvents(events): Observable\<Promise\<AxiosResponse\<any>>>
 
-The event is added to a queue and published in batches. The batch size and publish interval can be configured while initializing the client.
+Sends multiple messages to the W3bstream service. Returns an observable that emits a promise for each batch of messages.
 
-Returns:
-`true` if the event was successfully added to the queue, `false` otherwise.
-
-- `header`: An object that includes the following parameters:
-  - `device_id`: The ID of the device that sent the message.
-  - `event_type`: The type of the event. _(Optional)_
-  - `timestamp`: The timestamp of the event. _(Optional)_
-- `payload`: The message to send. Can be an object or binary data.
-
-#### client.stop()
-
-Stops the client. This method is only relevant when the client is initialized with `enableBatching: true`.
+- `events`: An array of objects that include the following parameters:
+  - `header`: An object that includes the following parameters:
+    - `device_id`: The ID of the device that sent the message.
+    - `event_type`: The type of the event. _(Optional)_
+    - `timestamp`: The timestamp of the event. _(Optional)_
+  - `payload`: The message to send. Can be an object or binary data.
