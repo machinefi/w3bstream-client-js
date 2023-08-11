@@ -13,12 +13,12 @@ The JS/TS Client for W3bstream integration on server. This library allows you to
   - [Publish single message](#publish-single-message)
   - [Preprocess your data before publishing](#preprocess-your-data-before-publishing)
   - [Sending multiple messages](#sending-multiple-messages)
-    - [Waiting for response](#waiting-for-response)
-    - [Using then/catch](#using-thencatch)
-  - [API](#api)
-    - [client.publishDirect](#clientpublishdirectmsgs-timestamp-promiseaxiosresponseany)
-    - [client.enqueueAndPublish](#clientenqueueandpublishheader-payload-boolean)
-    - [client.stop](#clientstop)
+    - [Basic usage](#basic-usage)
+    - [With more control](#with-more-control)
+- [API](#api)
+  - [W3bstreamClient(url, apiKey, options)](#w3bstreamclienturl-apikey-options)
+  - [client.publishSingle(header, payload)](#clientpublishsingleheader-payload)
+  - [client.publishEvents(events)](#clientpublisheventsevents)
 
 ## Prerequisites
 
@@ -133,7 +133,7 @@ Initializes the client.
   - `batchSize`: The number of events to publish in a single batch. Default: `100`.
   - `publishIntervalMs`: The interval between batche groups in milliseconds. Each batch group consist of 10 batches. Default: `1000`.
 
-#### client.publishSingle(header, payload): Promise\<AxiosResponse\<any>>
+#### client.publishSingle(header, payload)
 
 Sends a message to the W3bstream service. Returns a promise that resolves with the server's response.
 
@@ -143,7 +143,9 @@ Sends a message to the W3bstream service. Returns a promise that resolves with t
   - `timestamp`: The timestamp of the event. _(Optional)_
 - `payload`: The message to send. Can be an object or binary data.
 
-#### client.publishEvents(events): Observable\<Promise\<AxiosResponse\<any>>>
+Returns a promise that resolves with the server's response.
+
+#### client.publishEvents(events)
 
 Sends multiple messages to the W3bstream service. Returns an observable that emits a promise for each batch of messages.
 
@@ -153,3 +155,5 @@ Sends multiple messages to the W3bstream service. Returns an observable that emi
     - `event_type`: The type of the event. _(Optional)_
     - `timestamp`: The timestamp of the event. _(Optional)_
   - `payload`: The message to send. Can be an object or binary data.
+
+Returns an observable that emits a promise for each batch of messages.
