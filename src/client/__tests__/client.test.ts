@@ -50,7 +50,7 @@ describe("W3bstreamClient", () => {
   });
   describe("publishSingle", () => {
     it("should publish single msg with complete header", async () => {
-      client.publishSingle(HEADER_1, MOCK_DATA);
+      await client.publishSingle(HEADER_1, MOCK_DATA);
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
       assertAxiosPostWithTimestamp(mockFetch, HEADER_1.timestamp as number, HEADER_1_REQUEST_BODY);
@@ -58,7 +58,7 @@ describe("W3bstreamClient", () => {
     it("should publish single msg without event type in header", async () => {
       const header = { ...HEADER_1, event_type: undefined };
 
-      client.publishSingle(header, MOCK_DATA);
+      await client.publishSingle(header, MOCK_DATA);
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
       assertAxiosPostWithTimestamp(mockFetch, header.timestamp as number, [
@@ -75,7 +75,7 @@ describe("W3bstreamClient", () => {
         .mockImplementation(() => mockedTimestamp);
 
       const header = { ...HEADER_1, timestamp: undefined };
-      client.publishSingle(header, MOCK_DATA);
+      await client.publishSingle(header, MOCK_DATA);
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
       assertAxiosPostWithTimestamp(mockFetch, mockedTimestamp, [
@@ -87,9 +87,9 @@ describe("W3bstreamClient", () => {
 
       dateSpy.mockRestore();
     });
-    it("should publish single msg with binary data", () => {
+    it("should publish single msg with binary data", async () => {
       const data = Buffer.from("test data", "utf8");
-      client.publishSingle(HEADER_1, data);
+      await client.publishSingle(HEADER_1, data);
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
       assertAxiosPostWithTimestamp(mockFetch, HEADER_1.timestamp as number, [
