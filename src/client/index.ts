@@ -22,7 +22,6 @@ export class W3bstreamClient implements IW3bstreamClient {
 
   private _publishIntervalMs;
   private _batchSize;
-  // private _numberOfRetries = 1;
 
   constructor(
     private _url: string,
@@ -68,16 +67,11 @@ export class W3bstreamClient implements IW3bstreamClient {
     return from(chunksWithInterval).pipe(
       mergeMap((chunk) =>
         of(this._publish(chunk))
-      )
+      ),
     );
   }
-  // .pipe(
-  //   retry(this._numberOfRetries)
-  // )
-  // retry({
-  //   count: this._numberOfRetries,
-  //   delay: this._publishIntervalMs,
-  // })
+
+
   private _addIntervalToChunks(chunked: Observable<WSMessage[]>, publishInterval: Observable<number>) {
     return zip(chunked, publishInterval).pipe(
       concatMap(([chunk]) => chunk),
@@ -144,6 +138,8 @@ export class W3bstreamClient implements IW3bstreamClient {
     timestamp?: number
   ): Promise<AxiosResponse> {
     const url = this._buildUrl(timestamp);
+
+    console.timeLog("post", payload.length)
 
     return axios.post(url, payload, {
       headers: {

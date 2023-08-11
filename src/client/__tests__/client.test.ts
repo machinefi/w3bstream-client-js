@@ -243,16 +243,6 @@ function calcExpectedCallTimes(events: any[]) {
   return Math.ceil(events.length / DEFAULT_PUBLISH_BATCH_SIZE);
 }
 
-// function assertAxiosPost(mockFetch: jest.SpyInstance<any, any, any>, body: WSPayload) {
-//   expect(mockFetch).toHaveBeenCalledWith(
-//     expect.stringMatching(
-//       new RegExp(`${MOCK_URL}\\?eventType=${DATA_PUSH_EVENT_TYPE}`)
-//     ),
-//     body,
-//     REQUEST_HEADERS
-//   );
-// }
-
 function assertAxiosNthPostCall(mockFetch: jest.SpyInstance<any, any, any>, nthCall: number, body: WSPayload, size: number = DEFAULT_PUBLISH_BATCH_SIZE) {
   expect(mockFetch).toHaveBeenNthCalledWith(
     nthCall,
