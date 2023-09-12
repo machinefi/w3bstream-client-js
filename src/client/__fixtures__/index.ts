@@ -33,7 +33,7 @@ export const HEADER_2: WSHeader = {
   device_id: MOCK_DEVICE_ID_2,
   event_type: MOCK_EVENT_TYPE,
   timestamp: Date.now(),
-}
+};
 
 export const HEADER_1_REQUEST_BODY: WSPayload = [
   {

@@ -14,16 +14,14 @@ export interface WSMessage {
   timestamp: number;
 }
 
-export interface WSPayload extends Array<WSMessage> { }
+export interface WSPayload extends Array<WSMessage> {}
 
 export interface IW3bstreamClient {
   publishSingle: (
     header: WSHeader,
-    payload: Object | Buffer
+    payload: Object | Buffer,
   ) => Promise<AxiosResponse>;
-  publishEvents: (
-    events: RawEvent[]
-  ) => Observable<AxiosResponse>;
+  publishEvents: (events: RawEvent[]) => Observable<AxiosResponse>;
 }
 
 export interface RawEvent {

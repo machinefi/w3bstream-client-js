@@ -5,7 +5,7 @@ import {
   DATA_PUSH_EVENT_TYPE,
   DEFAULT_PUBLISH_BATCH_SIZE,
   DEFAULT_PUBLISH_BATCH_MAX,
-  DEFAULT_PUBLISH_INTERVAL_MS
+  DEFAULT_PUBLISH_INTERVAL_MS,
 } from "..";
 import { IW3bstreamClient, RawEvent, WSHeader, WSPayload } from "../types";
 import {
@@ -39,12 +39,12 @@ describe("W3bstreamClient", () => {
     });
     it("should throw if no url", () => {
       expect(() => new W3bstreamClient("", MOCK_API_KEY)).toThrow(
-        "url is required"
+        "url is required",
       );
     });
     it("should throw if no api key", () => {
       expect(() => new W3bstreamClient(MOCK_URL, "")).toThrow(
-        "api key is required"
+        "api key is required",
       );
     });
   });
@@ -53,7 +53,11 @@ describe("W3bstreamClient", () => {
       await client.publishSingle(HEADER_1, MOCK_DATA);
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
-      assertAxiosPostWithTimestamp(mockFetch, HEADER_1.timestamp as number, HEADER_1_REQUEST_BODY);
+      assertAxiosPostWithTimestamp(
+        mockFetch,
+        HEADER_1.timestamp as number,
+        HEADER_1_REQUEST_BODY,
+      );
     });
     it("should publish single msg without event type in header", async () => {
       const header = { ...HEADER_1, event_type: undefined };
@@ -65,7 +69,7 @@ describe("W3bstreamClient", () => {
         {
           ...HEADER_1_REQUEST_BODY[0],
           event_type: "DEFAULT",
-        }
+        },
       ]);
     });
     it("should publish single msg without timestamp in header", async () => {
@@ -82,7 +86,7 @@ describe("W3bstreamClient", () => {
         {
           ...HEADER_1_REQUEST_BODY[0],
           timestamp: mockedTimestamp,
-        }
+        },
       ]);
 
       dateSpy.mockRestore();
@@ -96,60 +100,102 @@ describe("W3bstreamClient", () => {
         {
           ...HEADER_1_REQUEST_BODY[0],
           payload: data.toString(),
-        }
+        },
       ]);
     });
     it("should throw if no device id", async () => {
       const header = { ...HEADER_1, device_id: "" };
 
       await expect(client.publishSingle(header, MOCK_DATA)).rejects.toThrow(
-        "device id is required"
+        "device id is required",
       );
     });
   });
   describe("publishEvents", () => {
-    it("should publish single msg with complete header", done => {
+    it("should publish single msg with complete header", (done) => {
       const events = [{ header: HEADER_1, payload: MOCK_DATA }];
       const calls = calcExpectedCallTimes(events);
 
-      assertSubscribe(client, events, done, mockFetch, calls, HEADER_1_REQUEST_BODY);
+      assertSubscribe(
+        client,
+        events,
+        done,
+        mockFetch,
+        calls,
+        HEADER_1_REQUEST_BODY,
+      );
     });
-    it("should publish multiple msgs with batch size", done => {
+    it("should publish multiple msgs with batch size", (done) => {
       const eventLength = DEFAULT_PUBLISH_BATCH_SIZE;
       const events = generateEvents(HEADER_1, eventLength);
       const calls = calcExpectedCallTimes(events);
 
-      assertSubscribe(client, events, done, mockFetch, calls, HEADER_1_REQUEST_BODY);
-    })
-    it("should publish multiple msgs below batch size", done => {
+      assertSubscribe(
+        client,
+        events,
+        done,
+        mockFetch,
+        calls,
+        HEADER_1_REQUEST_BODY,
+      );
+    });
+    it("should publish multiple msgs below batch size", (done) => {
       const eventLength = DEFAULT_PUBLISH_BATCH_SIZE - 1;
       const events = generateEvents(HEADER_1, eventLength);
       const calls = calcExpectedCallTimes(events);
 
-      assertSubscribe(client, events, done, mockFetch, calls, HEADER_1_REQUEST_BODY);
-    })
-    it("should publish multiple msgs above batch size", done => {
+      assertSubscribe(
+        client,
+        events,
+        done,
+        mockFetch,
+        calls,
+        HEADER_1_REQUEST_BODY,
+      );
+    });
+    it("should publish multiple msgs above batch size", (done) => {
       const eventLength = DEFAULT_PUBLISH_BATCH_SIZE + 1;
       const events = generateEvents(HEADER_1, eventLength);
       const calls = calcExpectedCallTimes(events);
 
-      assertSubscribe(client, events, done, mockFetch, calls, HEADER_1_REQUEST_BODY);
+      assertSubscribe(
+        client,
+        events,
+        done,
+        mockFetch,
+        calls,
+        HEADER_1_REQUEST_BODY,
+      );
     });
-    it("should publish multiple msgs with max batch size", done => {
+    it("should publish multiple msgs with max batch size", (done) => {
       const eventLength = DEFAULT_PUBLISH_BATCH_MAX;
       const events = generateEvents(HEADER_1, eventLength);
       const calls = calcExpectedCallTimes(events);
 
-      assertSubscribe(client, events, done, mockFetch, calls, HEADER_1_REQUEST_BODY);
-    })
-    it("should publish multiple msgs above max batch size", done => {
+      assertSubscribe(
+        client,
+        events,
+        done,
+        mockFetch,
+        calls,
+        HEADER_1_REQUEST_BODY,
+      );
+    });
+    it("should publish multiple msgs above max batch size", (done) => {
       const eventLength = DEFAULT_PUBLISH_BATCH_MAX + 1;
       const events = generateEvents(HEADER_1, eventLength);
       const calls = calcExpectedCallTimes(events);
 
-      assertSubscribe(client, events, done, mockFetch, calls, HEADER_1_REQUEST_BODY);
-    })
-    it("should change batch size", done => {
+      assertSubscribe(
+        client,
+        events,
+        done,
+        mockFetch,
+        calls,
+        HEADER_1_REQUEST_BODY,
+      );
+    });
+    it("should change batch size", (done) => {
       const batchSize = 10;
       const client = new W3bstreamClient(MOCK_URL, MOCK_API_KEY, {
         batchSize,
@@ -157,9 +203,17 @@ describe("W3bstreamClient", () => {
       const eventLength = batchSize + 1;
       const events = generateEvents(HEADER_1, eventLength);
 
-      assertSubscribe(client, events, done, mockFetch, 2, HEADER_1_REQUEST_BODY, batchSize);
-    })
-    it("should change publish interval", done => {
+      assertSubscribe(
+        client,
+        events,
+        done,
+        mockFetch,
+        2,
+        HEADER_1_REQUEST_BODY,
+        batchSize,
+      );
+    });
+    it("should change publish interval", (done) => {
       const publishIntervalMs = 500;
       const client = new W3bstreamClient(MOCK_URL, MOCK_API_KEY, {
         publishIntervalMs,
@@ -168,18 +222,20 @@ describe("W3bstreamClient", () => {
       const events = generateEvents(HEADER_1, eventLength);
       const calls = calcExpectedCallTimes(events);
 
-      client.publishEvents(events)
-        .subscribe({
-          next: () => { },
-          error: () => done.fail(),
-          complete: () => {
-            expect(mockFetch).toHaveBeenCalledTimes(calls);
-            assertPublishInterval(mockFetch, publishIntervalMs, DEFAULT_PUBLISH_INTERVAL_MS);
-            done();
-          },
-        });
-
-    })
+      client.publishEvents(events).subscribe({
+        next: () => {},
+        error: () => done.fail(),
+        complete: () => {
+          expect(mockFetch).toHaveBeenCalledTimes(calls);
+          assertPublishInterval(
+            mockFetch,
+            publishIntervalMs,
+            DEFAULT_PUBLISH_INTERVAL_MS,
+          );
+          done();
+        },
+      });
+    });
   });
 });
 
@@ -190,22 +246,26 @@ function assertSubscribe(
   mockFetch: jest.SpyInstance<any, any, any>,
   calls: number,
   body: WSPayload,
-  batchSize: number = DEFAULT_PUBLISH_BATCH_SIZE
+  batchSize: number = DEFAULT_PUBLISH_BATCH_SIZE,
 ) {
-  client.publishEvents(events)
-    .subscribe({
-      next: () => { },
-      error: () => done.fail(),
-      complete: () => {
-        expect(mockFetch).toHaveBeenCalledTimes(calls);
-        assertPostCalls(mockFetch, calls, body, events.length, batchSize);
-        done();
-      },
-    });
+  client.publishEvents(events).subscribe({
+    next: () => {},
+    error: () => done.fail(),
+    complete: () => {
+      expect(mockFetch).toHaveBeenCalledTimes(calls);
+      assertPostCalls(mockFetch, calls, body, events.length, batchSize);
+      done();
+    },
+  });
 }
 
-function assertPublishInterval(mockFetch: jest.SpyInstance<any, any, any>, min: number, max: number) {
-  const callsInOneBatch = DEFAULT_PUBLISH_BATCH_MAX / DEFAULT_PUBLISH_BATCH_SIZE;
+function assertPublishInterval(
+  mockFetch: jest.SpyInstance<any, any, any>,
+  min: number,
+  max: number,
+) {
+  const callsInOneBatch =
+    DEFAULT_PUBLISH_BATCH_MAX / DEFAULT_PUBLISH_BATCH_SIZE;
   const firstCallInFirstBatch = mockFetch.mock.calls[0][0];
   const firstCallInSecondBatch = mockFetch.mock.calls[callsInOneBatch][0];
 
@@ -221,7 +281,7 @@ function assertPostCalls(
   calls: number,
   body: WSPayload,
   size: number,
-  batchSize: number
+  batchSize: number,
 ) {
   let count = size;
   for (let i = 1; i <= calls; i++) {
@@ -231,11 +291,15 @@ function assertPostCalls(
   }
 }
 
-function assertAxiosPostWithTimestamp(post: jest.SpyInstance<any, any, any>, ts: number, body: WSPayload) {
+function assertAxiosPostWithTimestamp(
+  post: jest.SpyInstance<any, any, any>,
+  ts: number,
+  body: WSPayload,
+) {
   expect(post).toHaveBeenCalledWith(
     `${MOCK_URL}?eventType=${DATA_PUSH_EVENT_TYPE}&timestamp=${ts}`,
     body,
-    REQUEST_HEADERS
+    REQUEST_HEADERS,
   );
 }
 
@@ -243,18 +307,26 @@ function calcExpectedCallTimes(events: any[]) {
   return Math.ceil(events.length / DEFAULT_PUBLISH_BATCH_SIZE);
 }
 
-function assertAxiosNthPostCall(mockFetch: jest.SpyInstance<any, any, any>, nthCall: number, body: WSPayload, size: number = DEFAULT_PUBLISH_BATCH_SIZE) {
+function assertAxiosNthPostCall(
+  mockFetch: jest.SpyInstance<any, any, any>,
+  nthCall: number,
+  body: WSPayload,
+  size: number = DEFAULT_PUBLISH_BATCH_SIZE,
+) {
   expect(mockFetch).toHaveBeenNthCalledWith(
     nthCall,
     expect.stringMatching(
-      new RegExp(`${MOCK_URL}\\?eventType=${DATA_PUSH_EVENT_TYPE}`)
+      new RegExp(`${MOCK_URL}\\?eventType=${DATA_PUSH_EVENT_TYPE}`),
     ),
     Array(size).fill(body).flat(),
-    REQUEST_HEADERS
+    REQUEST_HEADERS,
   );
 }
 
-function generateEvents(header: WSHeader, size: number = DEFAULT_PUBLISH_BATCH_SIZE) {
+function generateEvents(
+  header: WSHeader,
+  size: number = DEFAULT_PUBLISH_BATCH_SIZE,
+) {
   return Array(size).fill({
     header,
     payload: MOCK_DATA,

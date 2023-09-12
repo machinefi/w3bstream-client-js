@@ -1,8 +1,14 @@
-import { Observable, from, timer, zip } from 'rxjs';
-import { bufferCount, concatMap, map, mergeMap, take } from 'rxjs/operators';
+import { Observable, from, timer, zip } from "rxjs";
+import { bufferCount, concatMap, map, mergeMap, take } from "rxjs/operators";
 import axios, { AxiosResponse } from "axios";
 
-import { WSHeader, WSPayload, IW3bstreamClient, WSMessage, RawEvent } from "./types";
+import {
+  WSHeader,
+  WSPayload,
+  IW3bstreamClient,
+  WSMessage,
+  RawEvent,
+} from "./types";
 
 export const DATA_PUSH_EVENT_TYPE = "DA-TA_PU-SH";
 export const DEFAULT_PUBLISH_INTERVAL_MS = 1_000;
@@ -28,11 +34,11 @@ export class W3bstreamClient implements IW3bstreamClient {
     private _apiKey: string,
     {
       batchSize = DEFAULT_PUBLISH_BATCH_SIZE,
-      publishIntervalMs = DEFAULT_PUBLISH_INTERVAL_MS
+      publishIntervalMs = DEFAULT_PUBLISH_INTERVAL_MS,
     }: {
       batchSize?: number;
       publishIntervalMs?: number;
-    } = {}
+    } = {},
   ) {
     if (!_url) {
       throw new W3bstreamClientError("url is required");
@@ -49,7 +55,7 @@ export class W3bstreamClient implements IW3bstreamClient {
 
   async publishSingle(
     header: WSHeader,
-    payload: Object | Buffer
+    payload: Object | Buffer,
   ): Promise<AxiosResponse> {
     this._validateHeader(header);
     const payloadObj = this._buildPayload({ header, payload });
@@ -57,37 +63,44 @@ export class W3bstreamClient implements IW3bstreamClient {
   }
 
   publishEvents(events: RawEvent[]): Observable<AxiosResponse> {
-    const chunked = this._processAndChunkRawEvents(events)
-    const publishInterval = this._getPublishInterval(events.length)
-    const chunksWithInterval = this._addIntervalToChunks(chunked, publishInterval)
-    return this._chunkPublisher(chunksWithInterval)
+    const chunked = this._processAndChunkRawEvents(events);
+    const publishInterval = this._getPublishInterval(events.length);
+    const chunksWithInterval = this._addIntervalToChunks(
+      chunked,
+      publishInterval,
+    );
+    return this._chunkPublisher(chunksWithInterval);
   }
 
-  private _chunkPublisher(chunksWithInterval: Observable<WSMessage[]>): Observable<AxiosResponse> {
+  private _chunkPublisher(
+    chunksWithInterval: Observable<WSMessage[]>,
+  ): Observable<AxiosResponse> {
     return from(chunksWithInterval).pipe(
-      mergeMap((chunk) => this._publish(chunk)
-      ),
+      mergeMap((chunk) => this._publish(chunk)),
     );
   }
 
-  private _addIntervalToChunks(chunked: Observable<WSMessage[]>, publishInterval: Observable<number>) {
+  private _addIntervalToChunks(
+    chunked: Observable<WSMessage[]>,
+    publishInterval: Observable<number>,
+  ) {
     return zip(chunked, publishInterval).pipe(
       concatMap(([chunk]) => chunk),
-      bufferCount(this._batchSize)
+      bufferCount(this._batchSize),
     );
   }
 
   private _getPublishInterval(eventsLength: number) {
     const delay = 0;
     return timer(delay, this._publishIntervalMs).pipe(
-      take(this._calcChunksCount(eventsLength))
+      take(this._calcChunksCount(eventsLength)),
     );
   }
 
   private _processAndChunkRawEvents(events: RawEvent[]) {
     return from(events).pipe(
       map((event) => this._buildPayload(event)),
-      bufferCount(this._batchMax)
+      bufferCount(this._batchMax),
     );
   }
 
@@ -114,7 +127,7 @@ export class W3bstreamClient implements IW3bstreamClient {
       event_type,
       payload: _payload,
       timestamp,
-    }
+    };
   }
 
   private _validateHeader(header: WSHeader): void {
@@ -133,7 +146,7 @@ export class W3bstreamClient implements IW3bstreamClient {
 
   private _publish(
     payload: WSPayload,
-    timestamp?: number
+    timestamp?: number,
   ): Promise<AxiosResponse> {
     const url = this._buildUrl(timestamp);
 
