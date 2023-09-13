@@ -236,6 +236,32 @@ describe("W3bstreamClient", () => {
         },
       });
     });
+    it("should change default batch max size", (done) => {
+      const batchMax = 200;
+      const client = new W3bstreamClient(MOCK_URL, MOCK_API_KEY, {
+        batchMax,
+      });
+      const eventLength = batchMax * 2;
+      const events = generateEvents(HEADER_1, eventLength);
+      const calls = calcExpectedCallTimes(events);
+
+      assertSubscribe(
+        client,
+        events,
+        done,
+        mockFetch,
+        calls,
+        HEADER_1_REQUEST_BODY,
+      );
+    });
+    it("batch size cannot be greater than batch max", () => {
+      const batchMax = 200;
+      const batchSize = 300;
+      expect(() => new W3bstreamClient(MOCK_URL, MOCK_API_KEY, {
+        batchSize,
+        batchMax,
+      })).toThrow("batch size cannot be greater than batch max");
+    });
   });
 });
 

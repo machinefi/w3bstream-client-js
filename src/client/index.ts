@@ -24,19 +24,21 @@ class W3bstreamClientError extends Error {
 
 export class W3bstreamClient implements IW3bstreamClient {
   private _DATA_PUSH_EVENT_TYPE = DATA_PUSH_EVENT_TYPE;
-  private _batchMax = DEFAULT_PUBLISH_BATCH_MAX;
 
   private _publishIntervalMs;
   private _batchSize;
+  private _batchMax;
 
   constructor(
     private _url: string,
     private _apiKey: string,
     {
       batchSize = DEFAULT_PUBLISH_BATCH_SIZE,
+      batchMax = DEFAULT_PUBLISH_BATCH_MAX,
       publishIntervalMs = DEFAULT_PUBLISH_INTERVAL_MS,
     }: {
       batchSize?: number;
+      batchMax?: number;
       publishIntervalMs?: number;
     } = {},
   ) {
@@ -46,10 +48,16 @@ export class W3bstreamClient implements IW3bstreamClient {
     if (!_apiKey) {
       throw new W3bstreamClientError("api key is required");
     }
+    if (batchSize > batchMax) {
+      throw new W3bstreamClientError(
+        "batch size cannot be greater than batch max",
+      );
+    }
 
     this._url = _url;
     this._apiKey = _apiKey;
     this._batchSize = batchSize;
+    this._batchMax = batchMax;
     this._publishIntervalMs = publishIntervalMs;
   }
 
