@@ -129,6 +129,7 @@ Initializes the client.
 - `apiKey`: The API key of the W3bstream service.
 - `options`: An object that includes the following optional parameters:
   - `batchSize`: The number of events to publish in a single batch. Default: `100`.
+  - `batchMax`: The maximum number of events to publish in a single interval. Default: `1000`.
   - `publishIntervalMs`: The interval between batche groups in milliseconds. Each batch group consist of 10 batches. Default: `1000`.
 
 #### client.publishSingle(header, payload)
